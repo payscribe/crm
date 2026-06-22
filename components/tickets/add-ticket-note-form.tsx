@@ -26,7 +26,7 @@ function activeMentionQuery(noteBody: string) {
 
   const textAfterAt = cursorText.slice(atIndex + 1);
 
-  if (textAfterAt.includes("\n")) {
+  if (textAfterAt.includes("\n") || /\s/.test(textAfterAt)) {
     return null;
   }
 
@@ -76,7 +76,9 @@ export function AddTicketNoteForm({
     }
 
     setNoteBody(
-      `${noteBody.slice(0, mention.atIndex)}@${staffMember.full_name} `
+      `${noteBody.slice(0, mention.atIndex)}@${staffMember.full_name} ${noteBody.slice(
+        mention.atIndex + mention.query.length + 1
+      )}`
     );
     setMentionedUserIds((current) =>
       current.includes(staffMember.user_id)

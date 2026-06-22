@@ -1,5 +1,6 @@
 import { queueTicketOpenedEmail } from "@/lib/email/outbound-events";
 import { sendSlackChannelMessage } from "@/lib/notifications/slack";
+import { ticketOpenedSlackMessage } from "@/lib/notifications/ticket-messages";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 
@@ -209,15 +210,22 @@ async function notifySlackForInboundTicket({
     const { data: business } = ticket.business_id
       ? await supabase
           .from("businesses")
-          .select("business_name")
+          .select("business_name, owner_name")
           .eq("business_id", ticket.business_id)
-          .maybeSingle<{ business_name: string }>()
+          .maybeSingle<{ business_name: string; owner_name: string | null }>()
       : { data: null };
 
-    const category = ticket.sub_category
-      ? `${ticket.issue_category} / ${ticket.sub_category}`
-      : ticket.issue_category;
-    const message = `NEW EMAIL TICKET ${ticket.ticket_id} - ${ticket.subject} - ${business?.business_name ?? "Unmatched email"} - From: ${ticket.customer_email ?? "Unknown"} - Category: ${category} - Priority: ${ticket.priority} - SLA: ${ticket.sla_deadline ?? "Not set"}.`;
+    const message = `${ticketOpenedSlackMessage({
+      assignedTo: ticket.assigned_to ?? "Unassigned",
+      businessName: business?.business_name ?? "Unmatched email",
+      businessOwner: business?.owner_name,
+      category: ticket.issue_category,
+      priority: ticket.priority,
+      sla: ticket.sla_deadline,
+      subCategory: ticket.sub_category,
+      subject: ticket.subject,
+      ticketId: ticket.ticket_id
+    })}\nFrom: ${ticket.customer_email ?? "Unknown"}`;
     const posted = await sendSlackChannelMessage({
       channelId,
       message,

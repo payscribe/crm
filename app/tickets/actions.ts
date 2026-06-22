@@ -7,8 +7,16 @@ import {
 } from "@/lib/email/outbound-events";
 import { deliverSlackEventsImmediately } from "@/lib/notifications/automation-delivery";
 import { sendSlackChannelMessage } from "@/lib/notifications/slack";
+import {
+  ticketAssignedSlackMessage,
+  ticketClosedSlackMessage,
+  ticketNoteSlackMessage,
+  ticketOpenedSlackMessage,
+  withSlackMentions
+} from "@/lib/notifications/ticket-messages";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { NewAutomationEvent } from "@/lib/types/automation-events";
+import type { StaffUser } from "@/lib/types/users";
 import {
   editableTicketStatuses,
   ticketAccountStatuses,
@@ -241,6 +249,97 @@ async function getBusinessTicketContact(
   return data ?? null;
 }
 
+async function createBusinessFromTicketForm({
+  formData,
+  permissions,
+  currentUser,
+  supabase
+}: {
+  formData: FormData;
+  permissions: Awaited<ReturnType<typeof getCurrentUserContext>>["permissions"];
+  currentUser: Awaited<ReturnType<typeof getCurrentUserContext>>["currentUser"];
+  supabase: Awaited<ReturnType<typeof getCurrentUserContext>>["supabase"];
+}) {
+  if (optionalText(formData.get("create_business")) !== "yes") {
+    return null;
+  }
+
+  if (!hasModulePermission(currentUser, permissions, "Businesses", "can_create")) {
+    redirect(
+      "/tickets?error=You%20need%20Businesses%20create%20permission%20to%20add%20a%20business%20from%20a%20ticket"
+    );
+  }
+
+  const businessName = optionalText(formData.get("new_business_name"));
+  const email = optionalText(formData.get("new_business_email"))?.toLowerCase();
+
+  if (!businessName || !email) {
+    redirect(
+      "/tickets?error=New%20business%20name%20and%20email%20are%20required"
+    );
+  }
+
+  const { data: createdBusiness, error } = await supabase
+    .from("businesses")
+    .insert({
+      business_name: businessName,
+      email,
+      kyb_status: "Not Submitted",
+      lifecycle_stage: "Registered",
+      owner_name: optionalText(formData.get("new_business_owner_name")),
+      phone: optionalText(formData.get("new_business_phone"))
+    })
+    .select("business_id")
+    .single<{ business_id: string }>();
+
+  if (error) {
+    redirect(`/tickets?error=${encodeURIComponent(error.message)}`);
+  }
+
+  formData.set("business_id", createdBusiness.business_id);
+  return createdBusiness.business_id;
+}
+
+function ticketAssignmentEvent({
+  assignedTo,
+  businessName,
+  priority,
+  slaDeadline,
+  subject,
+  ticketId
+}: {
+  assignedTo: string;
+  businessName: string;
+  priority: string;
+  slaDeadline: string | null;
+  subject: string;
+  ticketId: string;
+}): NewAutomationEvent {
+  return {
+    rule_key: "ticket_assigned",
+    module: "Tickets",
+    record_id: ticketId,
+    target_user_id: assignedTo,
+    target_channel: "slack_dm",
+    message: ticketAssignedSlackMessage({
+      assignedTo,
+      businessName,
+      priority,
+      sla: slaDeadline,
+      subject,
+      ticketId
+    }),
+    dedupe_key: `ticket_assigned:${ticketId}:${assignedTo}`,
+    payload: {
+      assigned_to: assignedTo,
+      business_name: businessName,
+      priority,
+      sla_deadline: slaDeadline,
+      ticket_id: ticketId
+    }
+  };
+}
+
 async function tryGetTicketThreadInfo(
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
   ticketId: string
@@ -263,7 +362,11 @@ async function ensureTicketSlackThread({
 }: {
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>;
   ticket: TicketThreadInfo;
-  staffMembers: Array<{ user_id: string; full_name: string }>;
+  staffMembers: Array<{
+    user_id: string;
+    full_name: string;
+    slack_user_id?: string | null;
+  }>;
 }) {
   const token = process.env.SLACK_BOT_TOKEN;
   const channelId = process.env.SLACK_CRM_TICKETS_CHANNEL_ID;
@@ -286,17 +389,27 @@ async function ensureTicketSlackThread({
   const { data: business } = ticket.business_id
     ? await supabaseAdmin
         .from("businesses")
-        .select("business_name")
+        .select("business_name, owner_name")
         .eq("business_id", ticket.business_id)
-        .maybeSingle<{ business_name: string }>()
+        .maybeSingle<{ business_name: string; owner_name: string | null }>()
     : { data: null };
   const assignee = ticket.assigned_to
     ? staffMembers.find((staffMember) => staffMember.user_id === ticket.assigned_to)
     : null;
-  const category = ticket.sub_category
-    ? `${ticket.issue_category} / ${ticket.sub_category}`
-    : ticket.issue_category;
-  const message = `NEW TICKET ${ticket.ticket_id} - ${ticket.subject} - ${business?.business_name ?? ticket.business_id ?? "Unmatched email"} - Category: ${category} - Priority: ${ticket.priority} - Assigned to: ${assignee?.full_name ?? "Unassigned"} - SLA: ${ticket.sla_deadline ?? "Not set"}.`;
+  const message = withSlackMentions(
+    ticketOpenedSlackMessage({
+    assignedTo: assignee?.full_name ?? "Unassigned",
+    businessName: business?.business_name ?? ticket.business_id ?? "Unmatched email",
+    businessOwner: business?.owner_name,
+    category: ticket.issue_category,
+    priority: ticket.priority,
+    sla: ticket.sla_deadline,
+    subCategory: ticket.sub_category,
+    subject: ticket.subject,
+    ticketId: ticket.ticket_id
+    }),
+    [assignee?.slack_user_id]
+  );
   const posted = await sendSlackChannelMessage({
     channelId,
     message,
@@ -324,13 +437,19 @@ async function postTicketSlackThreadReply({
   ticketId,
   message,
   failureMessage,
+  mentionSlackUserIds = [],
   staffMembers
 }: {
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>;
   ticketId: string;
   message: string;
   failureMessage: string;
-  staffMembers: Array<{ user_id: string; full_name: string }>;
+  mentionSlackUserIds?: Array<string | null | undefined>;
+  staffMembers: Array<{
+    user_id: string;
+    full_name: string;
+    slack_user_id?: string | null;
+  }>;
 }) {
   const token = process.env.SLACK_BOT_TOKEN;
 
@@ -357,7 +476,7 @@ async function postTicketSlackThreadReply({
 
     await sendSlackChannelMessage({
       channelId: thread.channelId,
-      message,
+      message: withSlackMentions(message, mentionSlackUserIds),
       module: "Tickets",
       recordId: ticketId,
       threadTs: thread.threadTs,
@@ -411,9 +530,15 @@ export async function createTicket(formData: FormData) {
   const { supabase, currentUser, permissions } = await getCurrentUserContext();
 
   if (!hasModulePermission(currentUser, permissions, "Tickets", "can_create")) {
-    redirect("/tickets?error=You%20do%20not%20have%20permission%20to%20create%20tickets");
+      redirect("/tickets?error=You%20do%20not%20have%20permission%20to%20create%20tickets");
   }
 
+  const createdBusinessId = await createBusinessFromTicketForm({
+    currentUser,
+    formData,
+    permissions,
+    supabase
+  });
   const values = await validateTicketForm(supabase, formData, "/tickets");
   const businessContact = await getBusinessTicketContact(
     supabase,
@@ -455,8 +580,9 @@ export async function createTicket(formData: FormData) {
     redirect(`/tickets?error=${encodeURIComponent(error.message)}`);
   }
 
+  const supabaseAdmin = createSupabaseAdminClient();
+
   try {
-    const supabaseAdmin = createSupabaseAdminClient();
     await supabaseAdmin
       .from("tickets")
       .update({ created_by: currentUser.user_id })
@@ -466,9 +592,9 @@ export async function createTicket(formData: FormData) {
       tryGetTicketThreadInfo(supabaseAdmin, createdTicket.ticket_id),
       supabaseAdmin
         .from("users")
-        .select("user_id, full_name")
+        .select("*")
         .eq("status", "Active")
-        .returns<Array<{ user_id: string; full_name: string }>>()
+        .returns<StaffUser[]>()
     ]);
 
     if (ticket && ticket.status !== "Closed") {
@@ -477,31 +603,25 @@ export async function createTicket(formData: FormData) {
         ticket,
         staffMembers: staffMembers ?? []
       });
-    }
 
-    if (createdTicket.customer_email && createdTicket.inbound_email_thread_id) {
-      if (values.status === "Closed" && values.resolutionNotes) {
-        await queueTicketClosedEmail({
-          customerEmail: createdTicket.customer_email,
-          customerName: createdTicket.customer_name,
-          gmailThreadId: createdTicket.inbound_email_thread_id,
-          resolution: values.resolutionNotes,
+      if (ticket.assigned_to) {
+        await deliverSlackEventsImmediately({
           supabase: supabaseAdmin,
-          ticketId: createdTicket.ticket_id
-        });
-      } else if (values.status === "Open") {
-        await queueTicketOpenedEmail({
-          customerEmail: createdTicket.customer_email,
-          customerName: createdTicket.customer_name,
-          gmailThreadId: createdTicket.inbound_email_thread_id,
-          subject: values.subject,
-          supabase: supabaseAdmin,
-          ticketId: createdTicket.ticket_id
+          staffMembers: staffMembers ?? [],
+          events: [
+            ticketAssignmentEvent({
+              assignedTo: ticket.assigned_to,
+              businessName: businessContact?.business_name ?? ticket.business_id ?? "Unmatched email",
+              priority: ticket.priority,
+              slaDeadline: ticket.sla_deadline,
+              subject: ticket.subject,
+              ticketId: ticket.ticket_id
+            })
+          ]
         });
       }
     }
   } catch (error) {
-    const supabaseAdmin = createSupabaseAdminClient();
     await logTicketSlackChannelFailure({
       supabaseAdmin,
       ticketId: createdTicket.ticket_id,
@@ -510,9 +630,50 @@ export async function createTicket(formData: FormData) {
     });
   }
 
+  let customerEmailStatus: "none" | "queued" | "failed" = "none";
+
+  try {
+    if (createdTicket.customer_email && createdTicket.inbound_email_thread_id) {
+      if (values.status === "Closed" && values.resolutionNotes) {
+        const queued = await queueTicketClosedEmail({
+          customerEmail: createdTicket.customer_email,
+          customerName: createdTicket.customer_name,
+          gmailThreadId: createdTicket.inbound_email_thread_id,
+          resolution: values.resolutionNotes,
+          supabase: supabaseAdmin,
+          ticketId: createdTicket.ticket_id
+        });
+        customerEmailStatus = queued ? "queued" : "failed";
+      } else if (values.status === "Open") {
+        const queued = await queueTicketOpenedEmail({
+          customerEmail: createdTicket.customer_email,
+          customerName: createdTicket.customer_name,
+          gmailThreadId: createdTicket.inbound_email_thread_id,
+          subject: values.subject,
+          supabase: supabaseAdmin,
+          ticketId: createdTicket.ticket_id
+        });
+        customerEmailStatus = queued ? "queued" : "failed";
+      }
+    }
+  } catch {
+    customerEmailStatus = "failed";
+  }
+
   revalidatePath("/");
   revalidatePath("/tickets");
-  redirect(`/tickets?success=Ticket%20${createdTicket.ticket_id}%20created`);
+  const customerEmailMessage =
+    customerEmailStatus === "queued"
+      ? ",%20customer%20email%20queued"
+      : customerEmailStatus === "failed"
+        ? ",%20but%20customer%20email%20could%20not%20be%20queued"
+        : customerEmail
+          ? ""
+          : ",%20no%20business%20email%20found";
+
+  redirect(
+    `/tickets?success=Ticket%20${createdTicket.ticket_id}%20created${createdBusinessId ? "%20with%20new%20business" : ""}${customerEmailMessage}`
+  );
 }
 
 export async function updateTicket(formData: FormData) {
@@ -535,7 +696,7 @@ export async function updateTicket(formData: FormData) {
 
   const { data: previousTicket } = await supabase
     .from("tickets")
-    .select("issue_category, sub_category, inbound_email_thread_id, source, customer_email, customer_name")
+    .select("issue_category, sub_category, inbound_email_thread_id, source, customer_email, customer_name, assigned_to")
     .eq("ticket_id", ticketId)
     .maybeSingle<{
       issue_category: string;
@@ -544,6 +705,7 @@ export async function updateTicket(formData: FormData) {
       source: string | null;
       customer_email: string | null;
       customer_name: string | null;
+      assigned_to: string | null;
     }>();
 
   const values = await validateTicketForm(
@@ -597,6 +759,34 @@ export async function updateTicket(formData: FormData) {
 
   if (error) {
     redirect(`/tickets/${ticketId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (values.assignedTo && previousTicket?.assigned_to !== values.assignedTo) {
+    try {
+      const supabaseAdmin = createSupabaseAdminClient();
+      const { data: staffMembers } = await supabaseAdmin
+        .from("users")
+        .select("*")
+        .eq("status", "Active")
+        .returns<StaffUser[]>();
+
+      await deliverSlackEventsImmediately({
+        supabase: supabaseAdmin,
+        staffMembers: staffMembers ?? [],
+        events: [
+          ticketAssignmentEvent({
+            assignedTo: values.assignedTo,
+            businessName: businessContact?.business_name ?? values.businessId,
+            priority: values.priority,
+            slaDeadline: null,
+            subject: values.subject,
+            ticketId
+          })
+        ]
+      });
+    } catch {
+      // Assignment DMs should not block ticket updates.
+    }
   }
 
   revalidatePath("/");
@@ -678,7 +868,10 @@ export async function closeTicket(formData: FormData) {
       ticketId,
       staffMembers: staffMembers ?? [],
       failureMessage: `Ticket close thread notification failed for ${ticketId}`,
-      message: `TICKET CLOSED ${ticketId}. Resolution: ${resolutionNotes}`
+      message: ticketClosedSlackMessage({
+        resolution: resolutionNotes,
+        ticketId
+      })
     });
   } catch {
     // Slack thread updates should not block closure.
@@ -840,6 +1033,12 @@ export async function addTicketNote(formData: FormData) {
   const authorName = currentUser.full_name;
   const preview =
     noteBody.length > 180 ? `${noteBody.slice(0, 177).trim()}...` : noteBody;
+  const noteMessage = ticketNoteSlackMessage({
+    addedBy: authorName,
+    note: preview,
+    subject: ticket.subject,
+    ticketId
+  });
   const events: NewAutomationEvent[] = Array.from(notifiedUserIds).map(
     (userId) => ({
       rule_key: "ticket_note_added",
@@ -847,7 +1046,7 @@ export async function addTicketNote(formData: FormData) {
       record_id: ticketId,
       target_user_id: userId,
       target_channel: "slack_dm",
-      message: `New note on ${ticketId} - ${ticket.subject}. Added by ${authorName}: ${preview}`,
+      message: noteMessage,
       dedupe_key: `ticket_note_added:${note?.note_id}:${userId}`,
       payload: {
         ticket_id: ticketId,
@@ -869,12 +1068,21 @@ export async function addTicketNote(formData: FormData) {
   }
 
   supabaseAdmin = supabaseAdmin ?? createSupabaseAdminClient();
+  const mentionSlackUserIds = Array.from(notifiedUserIds)
+    .map(
+      (userId) =>
+        (staffMembers ?? []).find((staffMember) => staffMember.user_id === userId)
+          ?.slack_user_id
+    )
+    .filter(Boolean);
+
   await postTicketSlackThreadReply({
     supabaseAdmin,
     ticketId,
     staffMembers: staffMembers ?? [],
     failureMessage: `Ticket note thread notification failed for ${ticketId}`,
-    message: `New note on ${ticketId} - ${ticket.subject}. Added by ${authorName}: ${preview}`
+    mentionSlackUserIds,
+    message: noteMessage
   });
 
   revalidatePath(`/tickets/${ticketId}`);

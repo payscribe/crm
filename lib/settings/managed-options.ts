@@ -96,7 +96,13 @@ export async function getManagedOptions(
     );
   }
 
-  return data ?? [];
+  if (!data || data.length === 0) {
+    return fallbackByGroup[optionGroup].filter(
+      (option) => !activeOnly || option.is_active
+    );
+  }
+
+  return data;
 }
 
 export async function getLeadProductInterestOptions(supabase: SupabaseClient) {

@@ -1,6 +1,10 @@
 import type { NewAutomationEvent } from "@/lib/types/automation-events";
 import type { Lead } from "@/lib/types/leads";
 import type { StaffUser } from "@/lib/types/users";
+import {
+  slackFieldTable,
+  withSlackMentions
+} from "@/lib/notifications/ticket-messages";
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
@@ -99,7 +103,16 @@ export function buildLeadAutomationEvents({
           ruleKey: "lead_follow_up_due",
           targetUserId: owner?.user_id ?? null,
           targetChannel: "slack_dm",
-          message: `Follow-up due: ${lead.lead_id} - ${lead.full_name} - ${lead.business_name ?? "No business name"} - Status: ${lead.status} - Last contact: ${lead.last_contact_date ?? "No contact logged"}.`,
+          message: slackFieldTable("LEAD FOLLOW-UP DUE", [
+            ["Lead ID", lead.lead_id],
+            ["Lead name", lead.full_name],
+            ["Business Name", lead.business_name],
+            ["Status", lead.status],
+            ["Stage", lead.stage],
+            ["Assigned to", owner?.full_name],
+            ["Next follow-up", lead.next_followup_date],
+            ["Last contact", lead.last_contact_date ?? "No contact logged"]
+          ]),
           payload: {
             assigned_to: owner?.full_name ?? null,
             next_followup_date: lead.next_followup_date,
@@ -116,7 +129,15 @@ export function buildLeadAutomationEvents({
           ruleKey: "lead_status_hot",
           targetUserId: null,
           targetChannel: "crm_leads",
-          message: `Hot lead: ${lead.lead_id} - ${lead.full_name} - ${lead.business_name ?? "No business name"} - Product interest: ${lead.product_interest.join(", ")} - Assigned to: ${owner?.full_name ?? "Unassigned"}.`,
+          message: withSlackMentions(slackFieldTable("HOT LEAD", [
+            ["Lead ID", lead.lead_id],
+            ["Lead name", lead.full_name],
+            ["Business Name", lead.business_name],
+            ["Product interest", lead.product_interest.join(", ")],
+            ["Assigned to", owner?.full_name ?? "Unassigned"],
+            ["Stage", lead.stage],
+            ["Status", lead.status]
+          ]), [owner?.slack_user_id]),
           payload: {
             assigned_to: owner?.full_name ?? null,
             product_interest: lead.product_interest
@@ -132,7 +153,15 @@ export function buildLeadAutomationEvents({
           ruleKey: "lead_new_stage_no_contact_48h",
           targetUserId: owner?.user_id ?? null,
           targetChannel: "slack_dm",
-          message: `${leadLabel(lead)} has been in New stage for 48 hours with no contact logged. Update the stage or log a communication.`,
+          message: slackFieldTable("LEAD NEEDS CONTACT", [
+            ["Lead ID", lead.lead_id],
+            ["Lead name", lead.full_name],
+            ["Business Name", lead.business_name],
+            ["Stage", lead.stage],
+            ["Assigned to", owner?.full_name],
+            ["Age", "48+ hours in New"],
+            ["Action", "Update stage or log communication"]
+          ]),
           payload: {
             assigned_to: owner?.full_name ?? null,
             created_at: lead.created_at

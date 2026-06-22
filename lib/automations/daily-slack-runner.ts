@@ -6,6 +6,7 @@ import { buildTicketAutomationEvents } from "@/lib/automations/ticket-events";
 import { defaultAutomationSettings } from "@/lib/constants/automation-settings";
 import { deliverSlackEventsImmediately } from "@/lib/notifications/automation-delivery";
 import { sendSlackChannelMessage } from "@/lib/notifications/slack";
+import { slackFieldTable } from "@/lib/notifications/ticket-messages";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { NewAutomationEvent } from "@/lib/types/automation-events";
 import type { AutomationSettings } from "@/lib/types/automation-settings";
@@ -133,7 +134,17 @@ async function ensureLeadThread({
 
   const posted = await sendSlackChannelMessage({
     channelId,
-    message: `NEW LEAD ${lead.lead_id} - ${lead.full_name} - ${lead.business_name ?? "No business name"} - Source: ${lead.source} - Product interest: ${lead.product_interest.join(", ")} - Stage: ${lead.stage} - Status: ${lead.status} - Assigned to: ${staffName(staffMembers, lead.assigned_to)} - Next follow-up: ${lead.next_followup_date}.`,
+    message: slackFieldTable("NEW LEAD", [
+      ["Lead ID", lead.lead_id],
+      ["Lead name", lead.full_name],
+      ["Business Name", lead.business_name],
+      ["Source", lead.source],
+      ["Product interest", lead.product_interest.join(", ")],
+      ["Stage", lead.stage],
+      ["Status", lead.status],
+      ["Assigned to", staffName(staffMembers, lead.assigned_to)],
+      ["Next follow-up", lead.next_followup_date]
+    ]),
     module: "Leads",
     recordId: lead.lead_id,
     token
@@ -175,7 +186,14 @@ async function ensurePartnerThread({
 
   const posted = await sendSlackChannelMessage({
     channelId,
-    message: `NEW PARTNER ${partner.partner_id} - ${partner.organisation_name} - Type: ${partnerDisplayType(partner)} - Status: ${partner.outreach_status} - Priority: ${partner.priority ?? "Not set"} - Owned by: ${staffName(staffMembers, partner.payscribe_contact)}.`,
+    message: slackFieldTable("NEW PARTNER", [
+      ["Partner ID", partner.partner_id],
+      ["Organisation", partner.organisation_name],
+      ["Type", partnerDisplayType(partner)],
+      ["Status", partner.outreach_status],
+      ["Priority", partner.priority],
+      ["Owned by", staffName(staffMembers, partner.payscribe_contact)]
+    ]),
     module: "Partners",
     recordId: partner.partner_id,
     token
@@ -249,7 +267,14 @@ async function sendLeadFollowUpThreadReplies({
 
       await sendSlackChannelMessage({
         channelId: thread.channelId,
-        message: `Follow-up due today or overdue. Assigned to: ${staffName(staffMembers, lead.assigned_to)}. Next follow-up date: ${lead.next_followup_date}.`,
+        message: slackFieldTable("LEAD FOLLOW-UP DUE", [
+          ["Lead ID", lead.lead_id],
+          ["Lead name", lead.full_name],
+          ["Business Name", lead.business_name],
+          ["Assigned to", staffName(staffMembers, lead.assigned_to)],
+          ["Next follow-up", lead.next_followup_date],
+          ["Action", "Follow-up due today or overdue"]
+        ]),
         module: "Leads",
         recordId: lead.lead_id,
         threadTs: thread.threadTs,
@@ -334,7 +359,13 @@ async function sendPartnerReviewThreadReplies({
 
       await sendSlackChannelMessage({
         channelId: thread.channelId,
-        message: `Partner review due today or overdue. Owner: ${staffName(staffMembers, partner.payscribe_contact)}. Original outcome: ${partner.outcome_reason ?? "Not recorded"}.`,
+        message: slackFieldTable("PARTNER REVIEW DUE", [
+          ["Partner ID", partner.partner_id],
+          ["Organisation", partner.organisation_name],
+          ["Owner", staffName(staffMembers, partner.payscribe_contact)],
+          ["Original outcome", partner.outcome_reason ?? "Not recorded"],
+          ["Action", "Review due today or overdue"]
+        ]),
         module: "Partners",
         recordId: partner.partner_id,
         threadTs: thread.threadTs,

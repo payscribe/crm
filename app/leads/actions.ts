@@ -4,6 +4,10 @@ import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { deliverSlackEventsImmediately } from "@/lib/notifications/automation-delivery";
 import { sendSlackChannelMessage } from "@/lib/notifications/slack";
 import {
+  slackFieldTable,
+  withSlackMentions
+} from "@/lib/notifications/ticket-messages";
+import {
   leadCommunicationChannels,
   leadCommunicationDirections,
   leadSources,
@@ -96,7 +100,17 @@ async function ensureLeadSlackThread({
   const assignee = staffMembers.find(
     (staffMember) => staffMember.user_id === lead.assigned_to
   );
-  const message = `NEW LEAD ${lead.lead_id} - ${lead.full_name} - ${lead.business_name ?? "No business name"} - Source: ${lead.source} - Product interest: ${lead.product_interest.join(", ")} - Stage: ${lead.stage} - Status: ${lead.status} - Assigned to: ${assignee?.full_name ?? "Unassigned"} - Next follow-up: ${lead.next_followup_date}.`;
+  const message = withSlackMentions(slackFieldTable("NEW LEAD", [
+    ["Lead ID", lead.lead_id],
+    ["Lead name", lead.full_name],
+    ["Business Name", lead.business_name],
+    ["Source", lead.source],
+    ["Product interest", lead.product_interest.join(", ")],
+    ["Stage", lead.stage],
+    ["Status", lead.status],
+    ["Assigned to", assignee?.full_name ?? "Unassigned"],
+    ["Next follow-up", lead.next_followup_date]
+  ]), [assignee?.slack_user_id]);
   const posted = await sendSlackChannelMessage({
     channelId,
     message,
@@ -343,7 +357,14 @@ export async function createLead(formData: FormData) {
         assignedTo: lead.assigned_to,
         staffMembers,
         dedupeKey: `lead_created_assignee:${lead.lead_id}`,
-        message: `You have been assigned lead ${lead.lead_id} - ${lead.full_name}. Status: ${lead.status}. Stage: ${lead.stage}. Next follow-up: ${lead.next_followup_date}.`
+        message: slackFieldTable("LEAD ASSIGNED", [
+          ["Lead ID", lead.lead_id],
+          ["Lead name", lead.full_name],
+          ["Business Name", lead.business_name],
+          ["Stage", lead.stage],
+          ["Status", lead.status],
+          ["Next follow-up", lead.next_followup_date]
+        ])
       });
     }
   } catch (slackError) {
@@ -498,7 +519,11 @@ export async function updateLead(formData: FormData) {
         leadId,
         staffMembers,
         failureMessage: `Lead note update thread notification failed for ${leadId}`,
-        message: `Notes updated by ${currentUser.full_name}: ${preview}`
+        message: slackFieldTable("LEAD NOTE UPDATED", [
+          ["Lead ID", leadId],
+          ["Updated by", currentUser.full_name],
+          ["Note", preview]
+        ])
       });
     }
 
@@ -509,7 +534,12 @@ export async function updateLead(formData: FormData) {
         assignedTo: values.assignedTo,
         staffMembers,
         dedupeKey: `lead_reassigned:${leadId}:${Date.now()}`,
-        message: `Lead ${leadId} has been assigned to you by ${currentUser.full_name}. Stage: ${values.stage}. Status: ${values.status}.`
+        message: slackFieldTable("LEAD ASSIGNED", [
+          ["Lead ID", leadId],
+          ["Assigned by", currentUser.full_name],
+          ["Stage", values.stage],
+          ["Status", values.status]
+        ])
       });
     }
   } catch {
@@ -582,7 +612,13 @@ export async function createLeadCommunicationLog(formData: FormData) {
       leadId,
       staffMembers,
       failureMessage: `Lead communication thread notification failed for ${leadId}`,
-      message: `Communication logged by ${currentUser.full_name}. Channel: ${channel}. Direction: ${direction}. Summary: ${preview}`
+      message: slackFieldTable("LEAD COMMUNICATION", [
+        ["Lead ID", leadId],
+        ["Logged by", currentUser.full_name],
+        ["Channel", channel],
+        ["Direction", direction],
+        ["Summary", preview]
+      ])
     });
 
     await notifyLeadAssignee({
@@ -591,7 +627,12 @@ export async function createLeadCommunicationLog(formData: FormData) {
       assignedTo: lead?.assigned_to ?? null,
       staffMembers,
       dedupeKey: `lead_communication_assignee:${log?.log_id}:${lead?.assigned_to ?? "none"}`,
-      message: `Communication logged on lead ${leadId} by ${currentUser.full_name}. Channel: ${channel}. Summary: ${preview}`
+      message: slackFieldTable("LEAD COMMUNICATION", [
+        ["Lead ID", leadId],
+        ["Logged by", currentUser.full_name],
+        ["Channel", channel],
+        ["Summary", preview]
+      ])
     });
   } catch {
     // Slack updates should not block communication logging.
@@ -657,7 +698,12 @@ export async function updateLeadStageAndStatus(formData: FormData) {
       ? `${previousLead.stage} / ${previousLead.status}`
       : "Previous state unknown";
     const nextState = `${stage} / ${status}`;
-    const message = `Stage/status changed by ${currentUser.full_name}: ${previousState} -> ${nextState}.`;
+    const message = slackFieldTable("LEAD STAGE/STATUS CHANGED", [
+      ["Lead ID", leadId],
+      ["Changed by", currentUser.full_name],
+      ["Previous", previousState],
+      ["Current", nextState]
+    ]);
 
     await postLeadSlackThreadReply({
       supabaseAdmin,
@@ -673,7 +719,13 @@ export async function updateLeadStageAndStatus(formData: FormData) {
       assignedTo: previousLead?.assigned_to ?? null,
       staffMembers,
       dedupeKey: `lead_stage_status_assignee:${leadId}:${Date.now()}`,
-      message: `Lead ${leadId} - ${previousLead?.full_name ?? "Unknown lead"} was updated by ${currentUser.full_name}: ${previousState} -> ${nextState}.`
+      message: slackFieldTable("LEAD UPDATED", [
+        ["Lead ID", leadId],
+        ["Lead name", previousLead?.full_name ?? "Unknown lead"],
+        ["Updated by", currentUser.full_name],
+        ["Previous", previousState],
+        ["Current", nextState]
+      ])
     });
   } catch {
     // Slack updates should not block stage/status changes.
@@ -742,7 +794,14 @@ export async function linkLeadToBusiness(formData: FormData) {
   try {
     const supabaseAdmin = createSupabaseAdminClient();
     const staffMembers = await activeStaffMembers(supabaseAdmin);
-    const message = `Lead linked to registered business by ${currentUser.full_name}: ${business.business_id} - ${business.business_name}. Stage set to Converted and status set to Closed Won.`;
+    const message = slackFieldTable("LEAD LINKED TO BUSINESS", [
+      ["Lead ID", leadId],
+      ["Business ID", business.business_id],
+      ["Business Name", business.business_name],
+      ["Linked by", currentUser.full_name],
+      ["Stage", "Converted"],
+      ["Status", "Closed Won"]
+    ]);
 
     await postLeadSlackThreadReply({
       supabaseAdmin,
@@ -758,7 +817,12 @@ export async function linkLeadToBusiness(formData: FormData) {
       assignedTo: lead.assigned_to,
       staffMembers,
       dedupeKey: `lead_linked_business_assignee:${leadId}:${businessId}`,
-      message: `Lead ${leadId} has been linked to business ${business.business_id} - ${business.business_name} by ${currentUser.full_name}.`
+      message: slackFieldTable("LEAD LINKED TO BUSINESS", [
+        ["Lead ID", leadId],
+        ["Business ID", business.business_id],
+        ["Business Name", business.business_name],
+        ["Linked by", currentUser.full_name]
+      ])
     });
   } catch {
     // Slack updates should not block business linking.

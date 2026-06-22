@@ -1,5 +1,7 @@
 import { AppShell } from "@/components/app-shell";
+import { createBusiness, bulkUploadBusinesses } from "@/app/businesses/actions";
 import { EmptyTableRow } from "@/components/ui/empty-table-row";
+import { FormModal } from "@/components/ui/form-modal";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusAlert } from "@/components/ui/status-alert";
@@ -52,6 +54,12 @@ export default async function BusinessesPage({
   const query = searchParams?.q?.trim() ?? "";
   const stage = searchParams?.stage ?? "";
   const kyb = searchParams?.kyb ?? "";
+  const canCreateBusinesses = hasModulePermission(
+    currentUser,
+    permissions,
+    "Businesses",
+    "can_create"
+  );
 
   let businessesQuery = supabase
     .from("businesses")
@@ -131,6 +139,162 @@ export default async function BusinessesPage({
             >
               Pipeline View
             </Link>
+            {canCreateBusinesses ? (
+            <>
+            <FormModal
+              buttonLabel="Add Business"
+              title="Add Business"
+              description="Create a business record manually while the platform database connection is not active."
+              size="default"
+            >
+              <form action={createBusiness} className="grid gap-4">
+                <label className="block">
+                  <span className="text-sm font-medium text-neutral-800">
+                    Business name
+                  </span>
+                  <input
+                    required
+                    name="business_name"
+                    className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                  />
+                </label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-neutral-800">
+                      Owner name
+                    </span>
+                    <input
+                      name="owner_name"
+                      className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-neutral-800">
+                      Email
+                    </span>
+                    <input
+                      required
+                      name="email"
+                      type="email"
+                      className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-neutral-800">
+                      Phone
+                    </span>
+                    <input
+                      name="phone"
+                      className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-neutral-800">
+                      Registration date
+                    </span>
+                    <input
+                      name="registration_date"
+                      type="date"
+                      className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-neutral-800">
+                      Lifecycle stage
+                    </span>
+                    <select
+                      name="lifecycle_stage"
+                      defaultValue="Registered"
+                      className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                    >
+                      {businessLifecycleStages.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-neutral-800">
+                      KYB status
+                    </span>
+                    <select
+                      name="kyb_status"
+                      defaultValue="Not Submitted"
+                      className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                    >
+                      {kybStatuses.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block md:col-span-2">
+                    <span className="text-sm font-medium text-neutral-800">
+                      CS owner
+                    </span>
+                    <select
+                      name="assigned_cs_owner"
+                      className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                    >
+                      <option value="">Unassigned</option>
+                      {(staffMembers ?? []).map((staffMember) => (
+                        <option
+                          key={staffMember.user_id}
+                          value={staffMember.user_id}
+                        >
+                          {staffMember.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <label className="block">
+                  <span className="text-sm font-medium text-neutral-800">
+                    Notes
+                  </span>
+                  <textarea
+                    name="notes"
+                    rows={3}
+                    className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                  />
+                </label>
+                <div className="flex justify-end">
+                  <SubmitButton pendingText="Creating business...">
+                    Create Business
+                  </SubmitButton>
+                </div>
+              </form>
+            </FormModal>
+            <FormModal
+              buttonLabel="Bulk Upload"
+              title="Bulk Upload Businesses"
+              description="Upload a CSV to create many business records at once."
+              size="default"
+            >
+              <form action={bulkUploadBusinesses} className="grid gap-4">
+                <div className="rounded border border-neutral-200 bg-neutral-50 p-3 text-xs leading-5 text-neutral-700">
+                  Required columns: <strong>business_name,email</strong>.
+                  Optional columns: owner_name, phone, lifecycle_stage,
+                  kyb_status, assigned_cs_owner_email, notes.
+                </div>
+                <input
+                  required
+                  type="file"
+                  name="csv_file"
+                  accept=".csv,text/csv"
+                  className="rounded border border-neutral-300 px-3 py-2 text-sm"
+                />
+                <div className="flex justify-end">
+                  <SubmitButton pendingText="Uploading...">
+                    Upload CSV
+                  </SubmitButton>
+                </div>
+              </form>
+            </FormModal>
+            </>
+            ) : null}
             </>
           }
         />

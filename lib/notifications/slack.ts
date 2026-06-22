@@ -50,10 +50,16 @@ export async function sendSlackDirectMessage({
   recordId?: string | null;
   token: string;
 }) {
+  const cleanSlackUserId = slackUserId.trim();
+
+  if (!cleanSlackUserId) {
+    throw new Error("Slack user ID is empty.");
+  }
+
   const conversation = await callSlackApi(
     "conversations.open",
     {
-      users: slackUserId
+      users: cleanSlackUserId
     },
     token
   );

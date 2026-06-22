@@ -37,6 +37,7 @@ export function NewTicketForm({
   const [businessQuery, setBusinessQuery] = useState("");
   const [selectedBusinessId, setSelectedBusinessId] = useState("");
   const [isBusinessLookupOpen, setIsBusinessLookupOpen] = useState(false);
+  const [createBusinessMode, setCreateBusinessMode] = useState(false);
   const isClosed = status === "Closed";
   const subCategories = useMemo(
     () => subCategoriesByCategory[category] ?? [],
@@ -76,9 +77,15 @@ export function NewTicketForm({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="relative block">
           <span className="text-sm font-medium text-neutral-800">Business</span>
+          <input
+            type="hidden"
+            name="create_business"
+            value={createBusinessMode ? "yes" : ""}
+          />
           <input type="hidden" name="business_id" value={selectedBusinessId} />
           <input
-            required
+            required={!createBusinessMode}
+            disabled={createBusinessMode}
             value={businessQuery}
             onChange={(event) => {
               setBusinessQuery(event.target.value);
@@ -102,6 +109,7 @@ export function NewTicketForm({
                     setBusinessQuery(
                       `${business.business_name} (${business.business_id})`
                     );
+                    setCreateBusinessMode(false);
                     setIsBusinessLookupOpen(false);
                   }}
                   className="block w-full border-b border-neutral-100 px-3 py-2 text-left text-sm transition last:border-b-0 hover:bg-blue-50"
@@ -125,9 +133,65 @@ export function NewTicketForm({
           <p className="mt-2 text-xs text-neutral-500">
             {selectedBusiness
               ? `Selected: ${selectedBusiness.business_name}`
-              : "Select a business from the lookup results before submitting."}
+              : createBusinessMode
+                ? "A new business will be created before the ticket is saved."
+                : "Select a business from the lookup results before submitting."}
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              setCreateBusinessMode((current) => !current);
+              setSelectedBusinessId("");
+              setIsBusinessLookupOpen(false);
+            }}
+            className="mt-2 text-xs font-semibold text-payscribe-blue hover:underline"
+          >
+            {createBusinessMode
+              ? "Use existing business lookup"
+              : "Business not listed? Add a new business"}
+          </button>
         </div>
+
+        {createBusinessMode ? (
+          <div className="rounded border border-blue-100 bg-blue-50 p-4 md:col-span-2 xl:col-span-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <label className="block">
+                <span className="text-sm font-medium text-neutral-800">
+                  New business name
+                </span>
+                <input
+                  required={createBusinessMode}
+                  name="new_business_name"
+                  defaultValue={businessQuery}
+                  className={inputClass}
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-neutral-800">
+                  Business email
+                </span>
+                <input
+                  required={createBusinessMode}
+                  type="email"
+                  name="new_business_email"
+                  className={inputClass}
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-neutral-800">
+                  Owner name
+                </span>
+                <input name="new_business_owner_name" className={inputClass} />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-neutral-800">
+                  Phone
+                </span>
+                <input name="new_business_phone" className={inputClass} />
+              </label>
+            </div>
+          </div>
+        ) : null}
 
         <label className="block">
           <span className="text-sm font-medium text-neutral-800">Status</span>

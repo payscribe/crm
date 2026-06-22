@@ -4,6 +4,10 @@ import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { deliverSlackEventsImmediately } from "@/lib/notifications/automation-delivery";
 import { sendSlackChannelMessage } from "@/lib/notifications/slack";
 import {
+  slackFieldTable,
+  withSlackMentions
+} from "@/lib/notifications/ticket-messages";
+import {
   partnerCommunicationChannels,
   partnerCommunicationDirections,
   partnerOutreachStatuses,
@@ -105,7 +109,15 @@ async function ensurePartnerSlackThread({
     partner.partner_type === "Other" && partner.custom_partner_type
       ? partner.custom_partner_type
       : partner.partner_type;
-  const message = `NEW PARTNER ${partner.partner_id} - ${partner.organisation_name} - Type: ${displayType} - Country: ${partner.country ?? "Not set"} - Status: ${partner.outreach_status} - Priority: ${partner.priority ?? "Not set"} - Owned by: ${owner?.full_name ?? "Unassigned"}.`;
+  const message = withSlackMentions(slackFieldTable("NEW PARTNER", [
+    ["Partner ID", partner.partner_id],
+    ["Organisation", partner.organisation_name],
+    ["Type", displayType],
+    ["Country", partner.country],
+    ["Status", partner.outreach_status],
+    ["Priority", partner.priority],
+    ["Owned by", owner?.full_name ?? "Unassigned"]
+  ]), [owner?.slack_user_id]);
   const posted = await sendSlackChannelMessage({
     channelId,
     message,
@@ -372,7 +384,12 @@ export async function createPartner(formData: FormData) {
         ownerUserId: partner.payscribe_contact,
         staffMembers,
         dedupeKey: `partner_created_owner:${partner.partner_id}`,
-        message: `You own partner ${partner.partner_id} - ${partner.organisation_name}. Status: ${partner.outreach_status}. Priority: ${partner.priority ?? "Not set"}.`
+        message: slackFieldTable("PARTNER ASSIGNED", [
+          ["Partner ID", partner.partner_id],
+          ["Organisation", partner.organisation_name],
+          ["Status", partner.outreach_status],
+          ["Priority", partner.priority]
+        ])
       });
     }
   } catch (slackError) {
@@ -480,7 +497,11 @@ export async function updatePartner(formData: FormData) {
         partnerId,
         staffMembers,
         failureMessage: `Partner update thread notification failed for ${partnerId}`,
-        message: `Partner updated by ${currentUser.full_name}. ${changes.join(" | ")}.`
+        message: slackFieldTable("PARTNER UPDATED", [
+          ["Partner ID", partnerId],
+          ["Updated by", currentUser.full_name],
+          ["Changes", changes.join(" | ")]
+        ])
       });
     }
 
@@ -491,7 +512,12 @@ export async function updatePartner(formData: FormData) {
         ownerUserId: nextOwner,
         staffMembers,
         dedupeKey: `partner_reassigned:${partnerId}:${Date.now()}`,
-        message: `Partner ${partnerId} - ${previousPartner?.organisation_name ?? values.organisationName} has been assigned to you by ${currentUser.full_name}. Status: ${values.outreachStatus}.`
+        message: slackFieldTable("PARTNER ASSIGNED", [
+          ["Partner ID", partnerId],
+          ["Organisation", previousPartner?.organisation_name ?? values.organisationName],
+          ["Assigned by", currentUser.full_name],
+          ["Status", values.outreachStatus]
+        ])
       });
     }
   } catch {
@@ -566,7 +592,13 @@ export async function createPartnerCommunicationLog(formData: FormData) {
       partnerId,
       staffMembers,
       failureMessage: `Partner communication thread notification failed for ${partnerId}`,
-      message: `Communication logged by ${currentUser.full_name}. Channel: ${channel}. Direction: ${direction}. Summary: ${preview}`
+      message: slackFieldTable("PARTNER COMMUNICATION", [
+        ["Partner ID", partnerId],
+        ["Logged by", currentUser.full_name],
+        ["Channel", channel],
+        ["Direction", direction],
+        ["Summary", preview]
+      ])
     });
 
     await notifyPartnerOwner({
@@ -575,7 +607,12 @@ export async function createPartnerCommunicationLog(formData: FormData) {
       ownerUserId: partner?.payscribe_contact ?? null,
       staffMembers,
       dedupeKey: `partner_communication_owner:${log?.log_id}:${partner?.payscribe_contact ?? "none"}`,
-      message: `Communication logged on partner ${partnerId} by ${currentUser.full_name}. Channel: ${channel}. Summary: ${preview}`
+      message: slackFieldTable("PARTNER COMMUNICATION", [
+        ["Partner ID", partnerId],
+        ["Logged by", currentUser.full_name],
+        ["Channel", channel],
+        ["Summary", preview]
+      ])
     });
   } catch {
     // Slack updates should not block communication logging.

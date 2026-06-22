@@ -1,6 +1,7 @@
 import type { NewAutomationEvent } from "@/lib/types/automation-events";
 import type { ProductEvent } from "@/lib/types/product-events";
 import type { StaffUser } from "@/lib/types/users";
+import { slackFieldTable } from "@/lib/notifications/ticket-messages";
 
 function posterName(event: ProductEvent, staffById: Map<string, StaffUser>) {
   return staffById.get(event.posted_by)?.full_name ?? "Unknown";
@@ -60,7 +61,16 @@ export function buildProductEventAutomationEvents({
           event,
           ruleKey: "product_outage_high_critical_reported",
           targetChannel: "crm_general",
-          message: `OUTAGE REPORTED - ${event.title} - Severity: ${event.severity} - Affected: ${event.affected_products.join(", ")} - ${event.description}. All incoming complaints may be related. Event ID: ${event.event_id}.`,
+          message: slackFieldTable("OUTAGE REPORTED", [
+            ["Event ID", event.event_id],
+            ["Title", event.title],
+            ["Severity", event.severity],
+            ["Affected", event.affected_products.join(", ")],
+            ["Status", event.status],
+            ["Posted by", posterName(event, staffById)],
+            ["Description", event.description],
+            ["Action", "Incoming complaints may be related"]
+          ]),
           payload: {
             affected_products: event.affected_products,
             posted_by: posterName(event, staffById)
@@ -75,7 +85,15 @@ export function buildProductEventAutomationEvents({
           event,
           ruleKey: "product_event_resolved",
           targetChannel: "crm_general",
-          message: `RESOLVED - ${event.event_id} - ${event.title} - Resolved in ${event.resolution_time_hours ?? "unknown"} hours.`,
+          message: slackFieldTable("PRODUCT EVENT RESOLVED", [
+            ["Event ID", event.event_id],
+            ["Title", event.title],
+            ["Severity", event.severity],
+            ["Affected", event.affected_products.join(", ")],
+            ["Resolved in", `${event.resolution_time_hours ?? "unknown"} hours`],
+            ["Resolved at", event.resolved_at],
+            ["Posted by", posterName(event, staffById)]
+          ]),
           payload: {
             resolved_at: event.resolved_at,
             resolution_time_hours: event.resolution_time_hours,

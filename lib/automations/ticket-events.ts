@@ -2,6 +2,12 @@ import type { NewAutomationEvent } from "@/lib/types/automation-events";
 import type { Business } from "@/lib/types/businesses";
 import type { Ticket } from "@/lib/types/tickets";
 import type { StaffUser } from "@/lib/types/users";
+import {
+  slackFieldTable,
+  ticketAssignedSlackMessage,
+  ticketOpenedSlackMessage,
+  withSlackMentions
+} from "@/lib/notifications/ticket-messages";
 
 function businessName(ticket: Ticket, businessById: Map<string, Business>) {
   return ticket.business_id
@@ -116,7 +122,19 @@ export function buildTicketAutomationEvents({
           ruleKey: "ticket_high_critical_created",
           targetUserId: null,
           targetChannel: "crm_tickets",
-          message: `NEW TICKET ${ticket.ticket_id} - ${ticket.subject} - ${ticket.issue_category}${ticket.sub_category ? ` / ${ticket.sub_category}` : ""} - ${name} - Priority: ${ticket.priority} - SLA: ${ticket.sla_deadline ?? "Not set"}.`,
+          message: withSlackMentions(ticketOpenedSlackMessage({
+            assignedTo: owner?.full_name ?? "Unassigned",
+            businessName: name,
+            businessOwner: ticket.business_id
+              ? businessById.get(ticket.business_id)?.owner_name
+              : null,
+            category: ticket.issue_category,
+            priority: ticket.priority,
+            sla: ticket.sla_deadline,
+            subCategory: ticket.sub_category,
+            subject: ticket.subject,
+            ticketId: ticket.ticket_id
+          }), [owner?.slack_user_id]),
           payload: {
             business_name: name,
             issue_category: ticket.issue_category,
@@ -134,7 +152,16 @@ export function buildTicketAutomationEvents({
           ruleKey: "ticket_assigned",
           targetUserId: owner?.user_id ?? null,
           targetChannel: "slack_dm",
-          message: `You have been assigned ${ticket.ticket_id}. Subject: ${ticket.subject}. Category: ${ticket.issue_category}${ticket.sub_category ? ` / ${ticket.sub_category}` : ""} for ${name}. Priority: ${ticket.priority}. SLA deadline: ${ticket.sla_deadline ?? "Not set"}.`,
+          message: ticketAssignedSlackMessage({
+            assignedTo: owner?.full_name,
+            businessName: name,
+            category: ticket.issue_category,
+            priority: ticket.priority,
+            sla: ticket.sla_deadline,
+            subCategory: ticket.sub_category,
+            subject: ticket.subject,
+            ticketId: ticket.ticket_id
+          }),
           payload: {
             business_name: name,
             assigned_to: owner?.full_name ?? null,
@@ -151,7 +178,16 @@ export function buildTicketAutomationEvents({
           ruleKey: "ticket_sla_halfway",
           targetUserId: owner?.user_id ?? null,
           targetChannel: "slack_dm",
-          message: `Reminder: ${ticket.ticket_id} is halfway through its SLA window. Current status: ${ticket.status}. Update if you are working on it.`,
+          message: slackFieldTable("SLA REMINDER", [
+            ["Ticket ID", ticket.ticket_id],
+            ["Business Name", name],
+            ["Subject", ticket.subject],
+            ["Status", ticket.status],
+            ["Priority", ticket.priority],
+            ["Assigned to", owner?.full_name],
+            ["SLA", ticket.sla_deadline],
+            ["Action", "Update the ticket if you are working on it"]
+          ]),
           payload: {
             business_name: name,
             assigned_to: owner?.full_name ?? null,
@@ -168,7 +204,15 @@ export function buildTicketAutomationEvents({
           ruleKey: "ticket_sla_breached",
           targetUserId: owner?.user_id ?? operationsManagerUserId ?? null,
           targetChannel: "slack_dm",
-          message: `SLA BREACHED: ${ticket.ticket_id} - ${name} - Priority: ${ticket.priority} - ${hoursOverdue(ticket)} hours overdue. Immediate attention needed.`,
+          message: slackFieldTable("SLA BREACHED", [
+            ["Ticket ID", ticket.ticket_id],
+            ["Business Name", name],
+            ["Subject", ticket.subject],
+            ["Priority", ticket.priority],
+            ["Assigned to", owner?.full_name],
+            ["Hours overdue", `${hoursOverdue(ticket)} hours`],
+            ["Action", "Immediate attention needed"]
+          ]),
           payload: {
             business_name: name,
             assigned_to: owner?.full_name ?? null,

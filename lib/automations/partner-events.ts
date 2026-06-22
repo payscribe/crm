@@ -1,6 +1,10 @@
 import type { NewAutomationEvent } from "@/lib/types/automation-events";
 import type { Partner } from "@/lib/types/partners";
 import type { StaffUser } from "@/lib/types/users";
+import {
+  slackFieldTable,
+  withSlackMentions
+} from "@/lib/notifications/ticket-messages";
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
@@ -94,7 +98,14 @@ export function buildPartnerAutomationEvents({
           ruleKey: "partner_outreach_no_response_7_days",
           targetUserId: contact?.user_id ?? null,
           targetChannel: "slack_dm",
-          message: `${partner.partner_id} - ${partner.organisation_name} - No response to outreach sent 7 days ago. Follow up or update status.`,
+          message: slackFieldTable("PARTNER FOLLOW-UP", [
+            ["Partner ID", partner.partner_id],
+            ["Organisation", partner.organisation_name],
+            ["Status", partner.outreach_status],
+            ["Owner", contact?.full_name],
+            ["First contacted", partner.date_first_contacted],
+            ["Action", "No response after 7 days. Follow up or update status"]
+          ]),
           payload: {
             payscribe_contact: contact?.full_name ?? null,
             date_first_contacted: partner.date_first_contacted
@@ -111,7 +122,14 @@ export function buildPartnerAutomationEvents({
           ruleKey: "partner_review_due",
           targetUserId: contact?.user_id ?? operationsManagerUserId ?? null,
           targetChannel: "slack_dm",
-          message: `Partner review due: ${partner.partner_id} - ${partner.organisation_name} - Original outcome: ${partner.outcome_reason ?? "Not recorded"} - Check if conditions have changed.`,
+          message: slackFieldTable("PARTNER REVIEW DUE", [
+            ["Partner ID", partner.partner_id],
+            ["Organisation", partner.organisation_name],
+            ["Owner", contact?.full_name],
+            ["Review date", partner.next_review_date],
+            ["Original outcome", partner.outcome_reason ?? "Not recorded"],
+            ["Action", "Check if conditions have changed"]
+          ]),
           payload: {
             payscribe_contact: contact?.full_name ?? null,
             operations_manager_user_id: operationsManagerUserId ?? null,
@@ -130,7 +148,14 @@ export function buildPartnerAutomationEvents({
           ruleKey: "partner_active",
           targetUserId: null,
           targetChannel: "crm_general",
-          message: `New active partner: ${partner.organisation_name} - Type: ${partner.partner_type} - Owned by: ${contact?.full_name ?? "Unassigned"}.`,
+          message: withSlackMentions(slackFieldTable("NEW ACTIVE PARTNER", [
+            ["Partner ID", partner.partner_id],
+            ["Organisation", partner.organisation_name],
+            ["Type", partner.partner_type],
+            ["Owner", contact?.full_name ?? "Unassigned"],
+            ["Country", partner.country],
+            ["Status", partner.outreach_status]
+          ]), [contact?.slack_user_id]),
           payload: {
             partner_type: partner.partner_type,
             payscribe_contact: contact?.full_name ?? null
@@ -150,7 +175,14 @@ export function buildPartnerAutomationEvents({
           ruleKey: "partner_critical_not_contacted_14_days",
           targetUserId: operationsManagerUserId ?? null,
           targetChannel: "slack_dm",
-          message: `${partner.partner_id} - ${partner.organisation_name} is tagged Critical priority but has not been contacted yet.`,
+          message: slackFieldTable("CRITICAL PARTNER NOT CONTACTED", [
+            ["Partner ID", partner.partner_id],
+            ["Organisation", partner.organisation_name],
+            ["Priority", partner.priority],
+            ["Status", partner.outreach_status],
+            ["Created", partner.created_at],
+            ["Action", "Critical priority but not contacted after 14 days"]
+          ]),
           payload: {
             operations_manager_user_id: operationsManagerUserId ?? null,
             created_at: partner.created_at
