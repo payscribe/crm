@@ -1,6 +1,7 @@
 import { signIn } from "./actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { PayscribeLogo } from "@/components/payscribe-logo";
 
 type LoginPageProps = {
   searchParams?: {
@@ -23,10 +24,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <main className="flex min-h-screen bg-white text-payscribe-black">
       <section className="hidden min-h-screen flex-1 bg-payscribe-blue px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide">
-            Payscribe CRM
-          </p>
-          <h1 className="mt-6 max-w-xl text-5xl font-semibold tracking-normal">
+          <PayscribeLogo className="h-12 w-auto" />
+          <h1 className="mt-8 max-w-xl text-5xl font-semibold tracking-normal">
             Operations, growth, support, and partner work in one place.
           </h1>
         </div>
@@ -37,9 +36,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       <section className="flex min-h-screen w-full items-center justify-center px-6 py-10 lg:w-[480px]">
         <div className="w-full max-w-sm">
-          <p className="text-sm font-semibold uppercase tracking-wide text-payscribe-blue lg:hidden">
-            Payscribe CRM
-          </p>
+          <div className="lg:hidden">
+            <PayscribeLogo className="h-10 w-auto" />
+          </div>
           <h2 className="mt-3 text-3xl font-semibold tracking-normal">
             Sign in
           </h2>

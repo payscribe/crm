@@ -3,6 +3,7 @@ import type { UserPermission } from "@/lib/types/permissions";
 import type { StaffUser } from "@/lib/types/users";
 import { signOut } from "@/app/login/actions";
 import { AppNavigation } from "@/components/app-navigation";
+import { PayscribeLogo } from "@/components/payscribe-logo";
 
 type AppShellProps = {
   currentUser: StaffUser;
@@ -43,10 +44,8 @@ export function AppShell({
     <div className="min-h-screen bg-neutral-50 text-payscribe-black">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-neutral-200 bg-white px-4 py-5 lg:flex lg:flex-col">
         <div className="px-2 pb-6">
-          <p className="text-xl font-semibold text-payscribe-blue">
-            Payscribe
-          </p>
-          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-neutral-500">
+          <PayscribeLogo className="h-10 w-auto" />
+          <p className="mt-3 text-xs font-medium uppercase tracking-wide text-neutral-500">
             Internal CRM
           </p>
         </div>

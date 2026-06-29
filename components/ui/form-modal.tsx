@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 type FormModalProps = {
   buttonLabel: string;
@@ -20,9 +20,10 @@ export function FormModal({
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const descriptionId = useId();
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !modalRef.current) {
       return;
     }
 
@@ -32,12 +33,27 @@ export function FormModal({
       }
     };
 
+    const handleFormSubmit = (event: Event) => {
+      if (!(event as SubmitEvent).defaultPrevented) {
+        setOpen(false);
+      }
+    };
+
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
+    
+    const forms = modalRef.current.querySelectorAll("form");
+    forms.forEach((form) => {
+      form.addEventListener("submit", handleFormSubmit);
+    });
 
     return () => {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
+      const forms = modalRef.current?.querySelectorAll("form");
+      forms?.forEach((form) => {
+        form.removeEventListener("submit", handleFormSubmit);
+      });
     };
   }, [open]);
 
@@ -53,6 +69,7 @@ export function FormModal({
 
       {open ? (
         <div
+          ref={modalRef}
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
           role="presentation"
         >

@@ -1,5 +1,5 @@
 import {
-  formatSlackNotificationText,
+  formatSlackNotificationHeading,
   notificationStyleForModule
 } from "@/lib/notifications/module-styles";
 
@@ -31,7 +31,9 @@ async function callSlackApi(
   const data = (await response.json()) as SlackResponse;
 
   if (!response.ok || !data.ok) {
-    throw new Error(data.error ?? `Slack API request failed: ${endpoint}`);
+    throw new Error(
+      `Slack API ${endpoint} failed: ${data.error ?? `HTTP ${response.status}`}`
+    );
   }
 
   return data;
@@ -173,7 +175,7 @@ function slackMessagePayload({
   recordId?: string | null;
 }) {
   const text = module
-    ? formatSlackNotificationText({ module, message, recordId })
+    ? formatSlackNotificationHeading({ message, module, recordId })
     : message;
   const style = notificationStyleForModule(module);
 
@@ -186,7 +188,7 @@ function slackMessagePayload({
     attachments: [
       {
         color: style.color,
-        text,
+        text: message,
         mrkdwn_in: ["text"]
       }
     ]

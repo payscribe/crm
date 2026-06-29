@@ -106,14 +106,17 @@ export function ticketAssignedSlackMessage({
 }
 
 export function ticketClosedSlackMessage({
+  closedBy,
   resolution,
   ticketId
 }: {
+  closedBy: string;
   resolution: string;
   ticketId: string;
 }) {
   return slackFieldTable("TICKET CLOSED", [
     ["Ticket ID", ticketId],
+    ["Closed By", closedBy],
     ["Resolution", resolution]
   ]);
 }

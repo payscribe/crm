@@ -869,6 +869,7 @@ export async function closeTicket(formData: FormData) {
       staffMembers: staffMembers ?? [],
       failureMessage: `Ticket close thread notification failed for ${ticketId}`,
       message: ticketClosedSlackMessage({
+        closedBy: currentUser.full_name,
         resolution: resolutionNotes,
         ticketId
       })

@@ -1,4 +1,4 @@
-import { ticketClosedGmailReply, ticketCreatedGmailReply } from "@/lib/email/gmail-replies";
+import { ticketClosedEmail, ticketCreatedEmail } from "@/lib/email/postmark";
 import type { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type SupabaseAdmin = ReturnType<typeof createSupabaseAdminClient>;
@@ -27,18 +27,19 @@ export async function queueTicketOpenedEmail({
   supabase,
   ticketId
 }: QueueTicketOpenedEmailInput) {
-  if (!customerEmail || !gmailThreadId) {
+  if (!customerEmail) {
     return false;
   }
 
-  const email = ticketCreatedGmailReply({
+  const email = ticketCreatedEmail({
     customerName,
     ticketId,
     subject
   });
 
   return queueTicketEmail({
-    bodyText: email.bodyText,
+    bodyText: email.textContent,
+    bodyHtml: email.htmlContent,
     customerEmail,
     customerName,
     gmailThreadId,
@@ -57,18 +58,19 @@ export async function queueTicketClosedEmail({
   supabase,
   ticketId
 }: QueueTicketClosedEmailInput) {
-  if (!customerEmail || !gmailThreadId) {
+  if (!customerEmail) {
     return false;
   }
 
-  const email = ticketClosedGmailReply({
+  const email = ticketClosedEmail({
     customerName,
     ticketId,
     resolution
   });
 
   return queueTicketEmail({
-    bodyText: email.bodyText,
+    bodyText: email.textContent,
+    bodyHtml: email.htmlContent,
     customerEmail,
     customerName,
     gmailThreadId,
@@ -81,6 +83,7 @@ export async function queueTicketClosedEmail({
 
 async function queueTicketEmail({
   bodyText,
+  bodyHtml,
   customerEmail,
   customerName,
   gmailThreadId,
@@ -90,9 +93,10 @@ async function queueTicketEmail({
   ticketId
 }: {
   bodyText: string;
+  bodyHtml: string;
   customerEmail: string;
   customerName: string | null;
-  gmailThreadId: string;
+  gmailThreadId: string | null;
   notificationType: "Ticket Opened" | "Ticket Closed";
   subject: string;
   supabase: SupabaseAdmin;
@@ -110,12 +114,14 @@ async function queueTicketEmail({
       .from("outbound_email_events")
       .update({
         body_text: bodyText,
+        body_html: bodyHtml,
         error_message: null,
         gmail_thread_id: gmailThreadId,
         recipient_email: customerEmail,
         recipient_name: customerName,
         sent_at: null,
         status: "Pending",
+        provider: "postmark",
         subject
       })
       .eq("event_id", existingEvent.event_id);
@@ -125,11 +131,13 @@ async function queueTicketEmail({
 
   const { error } = await supabase.from("outbound_email_events").insert({
     body_text: bodyText,
+    body_html: bodyHtml,
     gmail_thread_id: gmailThreadId,
     notification_type: notificationType,
     recipient_email: customerEmail,
     recipient_name: customerName,
     status: "Pending",
+    provider: "postmark",
     subject,
     ticket_id: ticketId
   });

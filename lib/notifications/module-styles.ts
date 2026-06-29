@@ -15,6 +15,11 @@ type ModuleStyle = {
   label: string;
 };
 
+type NotificationKind = {
+  emoji: string;
+  label: string;
+};
+
 const fallbackStyle: ModuleStyle = {
   color: "#6B7280",
   emoji: "⚙️",
@@ -92,4 +97,98 @@ export function formatSlackNotificationText({
     : `${style.emoji} *${style.label}*`;
 
   return `${heading}\n${message}`;
+}
+
+function notificationKindForMessage(message: string): NotificationKind {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("reminder") ||
+    normalized.includes("follow-up due") ||
+    normalized.includes("follow up") ||
+    normalized.includes("review due") ||
+    normalized.includes("halfway") ||
+    normalized.includes("due today") ||
+    normalized.includes("overdue")
+  ) {
+    return {
+      emoji: "⏰",
+      label: "REMINDER"
+    };
+  }
+
+  if (
+    normalized.includes("sla breached") ||
+    normalized.includes("breached") ||
+    normalized.includes("urgent") ||
+    normalized.includes("at risk") ||
+    normalized.includes("churned") ||
+    normalized.includes("critical priority")
+  ) {
+    return {
+      emoji: "🚨",
+      label: "ESCALATION"
+    };
+  }
+
+  if (
+    normalized.includes("resolved") ||
+    normalized.includes("closed") ||
+    normalized.includes("ticket closed")
+  ) {
+    return {
+      emoji: "✅",
+      label: "RESOLVED"
+    };
+  }
+
+  if (
+    normalized.includes("new note") ||
+    normalized.includes("communication") ||
+    normalized.includes("status changed") ||
+    normalized.includes("stage changed") ||
+    normalized.includes("assigned") ||
+    normalized.includes("link")
+  ) {
+    return {
+      emoji: "📝",
+      label: "UPDATE"
+    };
+  }
+
+  if (
+    normalized.includes("new ticket") ||
+    normalized.includes("new lead") ||
+    normalized.includes("new active") ||
+    normalized.includes("hot lead") ||
+    normalized.includes("outage reported")
+  ) {
+    return {
+      emoji: "✨",
+      label: "NEW"
+    };
+  }
+
+  return {
+    emoji: "ℹ️",
+    label: "NOTICE"
+  };
+}
+
+export function formatSlackNotificationHeading({
+  message,
+  module,
+  recordId
+}: {
+  message?: string | null;
+  module?: string | null;
+  recordId?: string | null;
+}) {
+  const style = notificationStyleForModule(module);
+  const kind = notificationKindForMessage(message ?? "");
+  const moduleLabel = `${style.emoji} ${style.label}`;
+
+  return recordId
+    ? `*${kind.emoji} ${kind.label} | ${moduleLabel} | ${recordId}*`
+    : `*${kind.emoji} ${kind.label} | ${moduleLabel}*`;
 }

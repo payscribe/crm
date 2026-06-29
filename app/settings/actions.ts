@@ -651,6 +651,60 @@ export async function retryFailedSlackAutomationEvents() {
   redirect("/settings/automations?success=Failed%20Slack%20events%20queued%20for%20retry");
 }
 
+export async function sendSlackDmTest(formData: FormData) {
+  const { supabase } = await requireSuperAdmin();
+  const staffUserId = String(formData.get("user_id") ?? "").trim();
+
+  if (!staffUserId) {
+    redirect("/settings/automations?error=Select%20a%20staff%20member%20to%20test");
+  }
+
+  const { data: staffMembers } = await supabase
+    .from("users")
+    .select("*")
+    .eq("status", "Active")
+    .returns<StaffUser[]>();
+  const targetStaff = (staffMembers ?? []).find(
+    (staffMember) => staffMember.user_id === staffUserId
+  );
+
+  if (!targetStaff) {
+    redirect("/settings/automations?error=Staff%20member%20not%20found");
+  }
+
+  const result = await deliverSlackEventsImmediately({
+    supabase,
+    staffMembers: staffMembers ?? [],
+    events: [
+      {
+        rule_key: "slack_dm_test",
+        module: "Settings",
+        record_id: staffUserId,
+        target_user_id: staffUserId,
+        target_channel: "slack_dm",
+        message: `Slack DM test for ${targetStaff.full_name}. If you can see this, Payscribe CRM direct messages are working.`,
+        dedupe_key: `slack_dm_test:${staffUserId}:${Date.now()}`,
+        payload: {
+          staff_user_id: staffUserId,
+          slack_user_id: targetStaff.slack_user_id
+        }
+      }
+    ]
+  });
+
+  revalidatePath("/settings/automations");
+
+  if (result.sentCount > 0) {
+    redirect(
+      `/settings/automations?success=Slack%20DM%20test%20sent%20to%20${encodeURIComponent(targetStaff.full_name)}`
+    );
+  }
+
+  redirect(
+    `/settings/automations?error=Slack%20DM%20test%20failed.%20Check%20Recent%20Event%20Log%20for%20the%20Slack%20error.`
+  );
+}
+
 const managedOptionGroups: ManagedOptionGroup[] = [
   "lead_product_interest",
   "ticket_sub_category",

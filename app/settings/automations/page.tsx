@@ -3,6 +3,12 @@ import { EmptyTableRow } from "@/components/ui/empty-table-row";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusAlert } from "@/components/ui/status-alert";
+import { SubmitButton } from "@/components/ui/submit-button";
+import {
+  retryFailedSlackAutomationEvents,
+  sendPendingSlackAutomationEvents,
+  sendSlackDmTest
+} from "@/app/settings/actions";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { buildBusinessAutomationEvents } from "@/lib/automations/business-events";
 import { buildLeadAutomationEvents } from "@/lib/automations/lead-events";
@@ -146,6 +152,67 @@ export default async function AutomationsPage({
           Slack due-date reminders are automatic. Vercel calls
           <span className="font-semibold"> /api/automations/slack/daily </span>
           every day at 08:00 UTC, which is 09:00 in Lagos.
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+          <div className="rounded border border-neutral-200 bg-white p-4">
+            <h3 className="text-base font-semibold text-neutral-950">
+              Test Slack DM
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-neutral-600">
+              Send a direct message to a staff member using the same path used
+              by ticket assignments and note mentions.
+            </p>
+            <form
+              action={sendSlackDmTest}
+              className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"
+            >
+              <select
+                required
+                name="user_id"
+                className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+              >
+                <option value="">Select staff member</option>
+                {(staffMembers ?? [])
+                  .filter((staffMember) => staffMember.status === "Active")
+                  .map((staffMember) => (
+                    <option
+                      key={staffMember.user_id}
+                      value={staffMember.user_id}
+                    >
+                      {staffMember.full_name}
+                      {staffMember.slack_user_id
+                        ? ` - ${staffMember.slack_user_id}`
+                        : " - No Slack ID"}
+                    </option>
+                  ))}
+              </select>
+              <SubmitButton pendingText="Sending test...">
+                Send Test DM
+              </SubmitButton>
+            </form>
+          </div>
+
+          <div className="rounded border border-neutral-200 bg-white p-4">
+            <h3 className="text-base font-semibold text-neutral-950">
+              Delivery Controls
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-neutral-600">
+              Use these only when reviewing failed or pending Slack events.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <form action={sendPendingSlackAutomationEvents}>
+                <SubmitButton variant="secondary" pendingText="Sending...">
+                  Send Pending
+                </SubmitButton>
+              </form>
+              <form action={retryFailedSlackAutomationEvents}>
+                <SubmitButton variant="outline" pendingText="Queueing...">
+                  Retry Failed
+                </SubmitButton>
+              </form>
+            </div>
+          </div>
         </div>
 
         <div className="mt-6 overflow-hidden rounded border border-neutral-200 bg-white">

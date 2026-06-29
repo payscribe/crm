@@ -43,6 +43,7 @@ export function AddTicketNoteForm({
 }: AddTicketNoteFormProps) {
   const [noteBody, setNoteBody] = useState("");
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const mention = activeMentionQuery(noteBody);
 
   const suggestions = useMemo(() => {
@@ -85,6 +86,7 @@ export function AddTicketNoteForm({
         ? current
         : [...current, staffMember.user_id]
     );
+    setActiveSuggestionIndex(0);
   }
 
   function removeMention(userId: string) {
@@ -110,7 +112,38 @@ export function AddTicketNoteForm({
           name="note_body"
           rows={3}
           value={noteBody}
-          onChange={(event) => setNoteBody(event.target.value)}
+          onChange={(event) => {
+            setNoteBody(event.target.value);
+            setActiveSuggestionIndex(0);
+          }}
+          onKeyDown={(event) => {
+            if (suggestions.length === 0) {
+              return;
+            }
+
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setActiveSuggestionIndex((current) =>
+                current + 1 >= suggestions.length ? 0 : current + 1
+              );
+            }
+
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setActiveSuggestionIndex((current) =>
+                current - 1 < 0 ? suggestions.length - 1 : current - 1
+              );
+            }
+
+            if (event.key === "Enter" && mention) {
+              event.preventDefault();
+              chooseMention(suggestions[activeSuggestionIndex]);
+            }
+
+            if (event.key === "Escape") {
+              setNoteBody((current) => `${current} `);
+            }
+          }}
           className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
         />
       </label>
@@ -121,14 +154,22 @@ export function AddTicketNoteForm({
             <button
               key={staffMember.user_id}
               type="button"
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseMention(staffMember)}
-              className="flex w-full flex-col px-3 py-2 text-left text-sm transition hover:bg-neutral-50"
+              className={`flex w-full flex-col px-3 py-2 text-left text-sm transition hover:bg-neutral-50 ${
+                suggestions[activeSuggestionIndex]?.user_id === staffMember.user_id
+                  ? "bg-blue-50"
+                  : ""
+              }`}
             >
               <span className="font-semibold text-neutral-900">
                 {staffMember.full_name}
               </span>
               <span className="text-xs text-neutral-500">
                 {mentionLabel(staffMember)}
+                {staffMember.slack_user_id
+                  ? ` - ${staffMember.slack_user_id}`
+                  : " - No Slack ID"}
               </span>
             </button>
           ))}
