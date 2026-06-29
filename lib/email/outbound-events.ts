@@ -1,4 +1,4 @@
-import { ticketClosedEmail, ticketCreatedEmail } from "@/lib/email/postmark";
+import { ticketClosedEmail, ticketCreatedEmail, sendTransactionalEmail } from "@/lib/email/postmark";
 import type { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type SupabaseAdmin = ReturnType<typeof createSupabaseAdminClient>;
@@ -102,6 +102,9 @@ async function queueTicketEmail({
   supabase: SupabaseAdmin;
   ticketId: string;
 }) {
+  let eventId: string | null = null;
+
+  // First check if there's an existing event
   const { data: existingEvent } = await supabase
     .from("outbound_email_events")
     .select("event_id")
@@ -110,7 +113,8 @@ async function queueTicketEmail({
     .maybeSingle<{ event_id: string }>();
 
   if (existingEvent) {
-    const { error } = await supabase
+    // Update existing event
+    const { data, error } = await supabase
       .from("outbound_email_events")
       .update({
         body_text: bodyText,
@@ -124,23 +128,87 @@ async function queueTicketEmail({
         provider: "postmark",
         subject
       })
-      .eq("event_id", existingEvent.event_id);
+      .eq("event_id", existingEvent.event_id)
+      .select("event_id")
+      .single<{ event_id: string }>();
 
-    return !error;
+    if (error) {
+      return false;
+    }
+    eventId = data.event_id;
+  } else {
+    // Create new event
+    const { data, error } = await supabase
+      .from("outbound_email_events")
+      .insert({
+        body_text: bodyText,
+        body_html: bodyHtml,
+        gmail_thread_id: gmailThreadId,
+        notification_type: notificationType,
+        recipient_email: customerEmail,
+        recipient_name: customerName,
+        status: "Pending",
+        provider: "postmark",
+        subject,
+        ticket_id: ticketId
+      })
+      .select("event_id")
+      .single<{ event_id: string }>();
+
+    if (error) {
+      return false;
+    }
+    eventId = data.event_id;
   }
 
-  const { error } = await supabase.from("outbound_email_events").insert({
-    body_text: bodyText,
-    body_html: bodyHtml,
-    gmail_thread_id: gmailThreadId,
-    notification_type: notificationType,
-    recipient_email: customerEmail,
-    recipient_name: customerName,
-    status: "Pending",
-    provider: "postmark",
-    subject,
-    ticket_id: ticketId
-  });
+  // Now try to send the email immediately
+  try {
+    const result = await sendTransactionalEmail({
+      to: {
+        email: customerEmail,
+        name: customerName
+      },
+      subject,
+      textContent: bodyText,
+      htmlContent: bodyHtml || bodyText.replace(/\n/g, "<br/>")
+    });
 
-  return !error;
+    // Update the event to Sent
+    await supabase
+      .from("outbound_email_events")
+      .update({
+        status: "Sent",
+        sent_at: new Date().toISOString(),
+        postmark_message_id: result.MessageID,
+        error_message: null
+      })
+      .eq("event_id", eventId);
+
+    // Also update the ticket's customer_notified_at or closure_notified_at
+    const ticketUpdate =
+      notificationType === "Ticket Opened"
+        ? { customer_notified_at: new Date().toISOString() }
+        : { closure_notified_at: new Date().toISOString() };
+
+    await supabase
+      .from("tickets")
+      .update(ticketUpdate)
+      .eq("ticket_id", ticketId);
+
+    return true;
+  } catch (error) {
+    // If sending fails, mark event as Failed and return false
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown Postmark error";
+
+    await supabase
+      .from("outbound_email_events")
+      .update({
+        status: "Failed",
+        error_message: errorMessage
+      })
+      .eq("event_id", eventId);
+
+    return false;
+  }
 }
