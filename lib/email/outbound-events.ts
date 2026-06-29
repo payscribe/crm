@@ -54,18 +54,16 @@ export async function queueTicketClosedEmail({
   customerEmail,
   customerName,
   gmailThreadId,
-  resolution,
   supabase,
   ticketId
-}: QueueTicketClosedEmailInput) {
+}: Omit<QueueTicketClosedEmailInput, 'resolution'>) {
   if (!customerEmail) {
     return false;
   }
 
   const email = ticketClosedEmail({
     customerName,
-    ticketId,
-    resolution
+    ticketId
   });
 
   return queueTicketEmail({

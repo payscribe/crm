@@ -636,13 +636,12 @@ export async function createTicket(formData: FormData) {
     if (createdTicket.customer_email && createdTicket.inbound_email_thread_id) {
       if (values.status === "Closed" && values.resolutionNotes) {
         const queued = await queueTicketClosedEmail({
-          customerEmail: createdTicket.customer_email,
-          customerName: createdTicket.customer_name,
-          gmailThreadId: createdTicket.inbound_email_thread_id,
-          resolution: values.resolutionNotes,
-          supabase: supabaseAdmin,
-          ticketId: createdTicket.ticket_id
-        });
+        customerEmail: createdTicket.customer_email,
+        customerName: createdTicket.customer_name,
+        gmailThreadId: createdTicket.inbound_email_thread_id,
+        supabase: supabaseAdmin,
+        ticketId: createdTicket.ticket_id
+      });
         customerEmailStatus = queued ? "queued" : "failed";
       } else if (values.status === "Open") {
         const queued = await queueTicketOpenedEmail({
@@ -891,7 +890,6 @@ export async function closeTicket(formData: FormData) {
         customerEmail: closureCustomerEmail,
         customerName: closureCustomerName,
         gmailThreadId: closureGmailThreadId,
-        resolution: resolutionNotes,
         supabase: supabaseAdmin,
         ticketId
       });

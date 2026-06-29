@@ -102,12 +102,10 @@ Payscribe Support`;
 
 export function ticketClosedEmail({
   customerName,
-  ticketId,
-  resolution
+  ticketId
 }: {
   customerName: string | null;
   ticketId: string;
-  resolution: string;
 }) {
   const greeting = customerName ? `Hello ${customerName},` : "Hello,";
   const htmlGreeting = customerName
@@ -116,9 +114,6 @@ export function ticketClosedEmail({
   const textContent = `${greeting}
 
 Your ticket ${ticketId} has been closed.
-
-Resolution:
-${resolution}
 
 Best regards,
 Payscribe Support`;
@@ -129,8 +124,6 @@ Payscribe Support`;
     htmlContent: `
       <p>${htmlGreeting}</p>
       <p>Your ticket <strong>${ticketId}</strong> has been closed.</p>
-      <p><strong>Resolution:</strong></p>
-      <p>${escapeHtml(resolution).replace(/\n/g, "<br/>")}</p>
       <p>Best regards,<br/>Payscribe Support</p>
     `
   };
