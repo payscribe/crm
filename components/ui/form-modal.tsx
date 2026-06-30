@@ -33,27 +33,12 @@ export function FormModal({
       }
     };
 
-    const handleFormSubmit = (event: Event) => {
-      if (!(event as SubmitEvent).defaultPrevented) {
-        setOpen(false);
-      }
-    };
-
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
-    
-    const forms = modalRef.current.querySelectorAll("form");
-    forms.forEach((form) => {
-      form.addEventListener("submit", handleFormSubmit);
-    });
 
     return () => {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
-      const forms = modalRef.current?.querySelectorAll("form");
-      forms?.forEach((form) => {
-        form.removeEventListener("submit", handleFormSubmit);
-      });
     };
   }, [open]);
 
