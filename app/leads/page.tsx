@@ -18,7 +18,8 @@ import type { Lead, LeadStage, LeadStatus } from "@/lib/types/leads";
 import type { StaffUser } from "@/lib/types/users";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createLead } from "./actions";
+import { DownloadTemplateButton } from "@/components/leads/download-template-button";
+import { bulkUploadLeads, createLead } from "./actions";
 
 type LeadsPageProps = {
   searchParams?: {
@@ -156,7 +157,36 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         </div>
 
         {canCreate ? (
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-end gap-3">
+            <FormModal
+              buttonLabel="Import CSV"
+              title="Bulk Import Leads"
+              size="default"
+              description="Upload a CSV to import multiple leads at once. Rows missing full_name or phone are skipped."
+            >
+              <form action={bulkUploadLeads} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-800">
+                    CSV file
+                  </label>
+                  <input
+                    required
+                    type="file"
+                    name="csv_file"
+                    accept=".csv,text/csv"
+                    className="mt-2 block w-full text-sm text-neutral-700 file:mr-3 file:rounded file:border file:border-neutral-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-neutral-700 hover:file:border-payscribe-blue hover:file:text-payscribe-blue"
+                  />
+                </div>
+                <div className="rounded border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-600 leading-5">
+                  <strong className="text-neutral-800">Required columns:</strong> <code>full_name</code>, <code>phone</code><br />
+                  <strong className="text-neutral-800">Optional columns:</strong> <code>business_name</code>, <code>email</code>, <code>source</code>, <code>referral_source_name</code>, <code>product_interest</code>, <code>stage</code>, <code>status</code>, <code>assigned_to_email</code>, <code>next_followup_date</code>, <code>last_message_summary</code>, <code>notes</code>
+                </div>
+                <div className="flex items-center justify-between">
+                  <DownloadTemplateButton />
+                  <SubmitButton pendingText="Importing...">Import Leads</SubmitButton>
+                </div>
+              </form>
+            </FormModal>
             <FormModal
               buttonLabel="Add New Lead"
               title="Add Lead"

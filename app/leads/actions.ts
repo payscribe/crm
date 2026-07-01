@@ -14,6 +14,7 @@ import {
   leadStages,
   leadStatuses
 } from "@/lib/constants/leads";
+import type { LeadStage, LeadStatus } from "@/lib/types/leads";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getLeadProductInterestOptions } from "@/lib/settings/managed-options";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -835,6 +836,154 @@ export async function linkLeadToBusiness(formData: FormData) {
   revalidatePath(`/leads/${leadId}`);
   revalidatePath(`/businesses/${businessId}`);
   redirect(`/leads/${leadId}?success=Lead%20linked%20to%20registered%20business`);
+}
+
+export async function bulkUploadLeads(formData: FormData) {
+  const { currentUser, permissions } = await getCurrentUserContext();
+
+  if (!hasModulePermission(currentUser, permissions, "Leads", "can_create")) {
+    redirect("/leads?error=You%20do%20not%20have%20permission%20to%20create%20leads");
+  }
+
+  const file = formData.get("csv_file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    redirect("/leads?error=Please%20upload%20a%20CSV%20file");
+  }
+
+  const rows = parseCsv(await file.text());
+  const [headers, ...bodyRows] = rows;
+
+  if (!headers || bodyRows.length === 0) {
+    redirect("/leads?error=CSV%20must%20include%20a%20header%20and%20at%20least%20one%20row");
+  }
+
+  const headerMap = headers.map(normalizeHeader);
+  const records = [];
+  let skipped = 0;
+
+  // Pre-resolve all unique staff emails in one query
+  const supabaseAdmin = createSupabaseAdminClient();
+  const rawEmails = bodyRows
+    .map((row) => row[headerMap.indexOf("assigned_to_email")]?.trim().toLowerCase())
+    .filter(Boolean) as string[];
+  const uniqueEmails = [...new Set(rawEmails)];
+
+  let staffEmailMap: Record<string, string> = {};
+  if (uniqueEmails.length > 0) {
+    const { data: staffRows } = await supabaseAdmin
+      .from("users")
+      .select("user_id, email")
+      .in("email", uniqueEmails)
+      .returns<Array<{ user_id: string; email: string }>>();
+    staffEmailMap = Object.fromEntries(
+      (staffRows ?? []).map((s) => [s.email.toLowerCase(), s.user_id])
+    );
+  }
+
+  for (const row of bodyRows) {
+    const get = (key: string) => row[headerMap.indexOf(key)]?.trim() || null;
+    const fullName = get("full_name");
+    const phone = get("phone");
+
+    if (!fullName || !phone) {
+      skipped += 1;
+      continue;
+    }
+
+    const assignedToEmail = get("assigned_to_email")?.toLowerCase() ?? null;
+    const assignedTo = assignedToEmail ? (staffEmailMap[assignedToEmail] ?? null) : null;
+
+    const stage = leadStages.includes(get("stage") as LeadStage)
+      ? (get("stage") as LeadStage)
+      : "New";
+    const status = leadStatuses.includes(get("status") as LeadStatus)
+      ? (get("status") as LeadStatus)
+      : "Cold";
+    const source = leadSources.includes(get("source") as typeof leadSources[number])
+      ? (get("source") as typeof leadSources[number])
+      : null;
+
+    const nextFollowupDate = get("next_followup_date") ?? null;
+
+    records.push({
+      full_name: fullName,
+      business_name: get("business_name"),
+      phone,
+      email: get("email")?.toLowerCase() ?? null,
+      source,
+      referral_source_name: get("referral_source_name"),
+      product_interest: get("product_interest"),
+      stage,
+      status,
+      assigned_to: assignedTo,
+      next_followup_date: nextFollowupDate,
+      last_message_summary: get("last_message_summary"),
+      notes: get("notes")
+    });
+  }
+
+  if (records.length === 0) {
+    redirect("/leads?error=No%20valid%20lead%20rows%20found%20(full_name%20and%20phone%20are%20required)");
+  }
+
+  const { error } = await supabaseAdmin.from("leads").insert(records);
+
+  if (error) {
+    redirect(`/leads?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/leads/pipeline");
+  revalidatePath("/leads/attention");
+  redirect(
+    `/leads?success=${records.length}%20lead(s)%20imported,%20${skipped}%20skipped`
+  );
+}
+
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let current = "";
+  let row: string[] = [];
+  let inQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      current += '"';
+      index += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      row.push(current.trim());
+      current = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") {
+        index += 1;
+      }
+      row.push(current.trim());
+      if (row.some(Boolean)) {
+        rows.push(row);
+      }
+      current = "";
+      row = [];
+    } else {
+      current += char;
+    }
+  }
+
+  row.push(current.trim());
+  if (row.some(Boolean)) {
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function normalizeHeader(header: string) {
+  return header.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
 export async function deleteLead(formData: FormData) {

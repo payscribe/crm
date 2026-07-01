@@ -3,6 +3,10 @@
     {
       "path": "/api/automations/slack/daily",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/outbound-email/postmark/send-pending",
+      "schedule": "0 * * * *"
     }
   ]
 }

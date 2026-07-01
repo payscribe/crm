@@ -27,12 +27,13 @@ type PostmarkInboundWebhookPayload = {
   HtmlBody: string;
   MessageID: string;
   MessageStream: string;
+  Headers?: Array<{ Name: string; Value: string }>;
 };
 
 export async function POST(request: Request) {
   const configuredSecret = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
-  const authHeader = request.headers.get("authorization") ?? "";
-  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get("secret") ?? "";
 
   if (!configuredSecret || token !== configuredSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -50,7 +51,8 @@ export async function POST(request: Request) {
   }
 
   const emailId = payload.MessageID;
-  const threadId = payload.MessageID;
+  const inReplyTo = payload.Headers?.find(h => h.Name === "In-Reply-To")?.Value ?? null;
+  const threadId = inReplyTo ?? payload.MessageID;
   const subject = payload.Subject || "Email support request";
   const body = payload.TextBody || stripHtml(payload.HtmlBody);
   const dateStr = payload.Date;
@@ -69,34 +71,68 @@ export async function POST(request: Request) {
 
   const supabase = createSupabaseAdminClient();
 
-  const { data: existingTicket } = await supabase
+  type ExistingTicket = {
+    ticket_id: string;
+    subject: string;
+    customer_email: string | null;
+    customer_name: string | null;
+    customer_notified_at: string | null;
+    inbound_email_thread_id: string | null;
+  };
+
+  // Check for exact duplicate (same MessageID)
+  const { data: duplicateTicket } = await supabase
     .from("tickets")
     .select("ticket_id, subject, customer_email, customer_name, customer_notified_at, inbound_email_thread_id")
     .eq("inbound_email_message_id", emailId)
-    .maybeSingle<{
-      ticket_id: string;
-      subject: string;
-      customer_email: string | null;
-      customer_name: string | null;
-      customer_notified_at: string | null;
-      inbound_email_thread_id: string | null;
-    }>();
+    .maybeSingle<ExistingTicket>();
 
-  if (existingTicket) {
-    if (!existingTicket.customer_notified_at) {
+  if (duplicateTicket) {
+    if (!duplicateTicket.customer_notified_at) {
       await queueTicketOpenedEmail({
-        customerEmail: existingTicket.customer_email,
-        customerName: existingTicket.customer_name,
-        gmailThreadId: existingTicket.inbound_email_thread_id,
-        subject: existingTicket.subject,
+        customerEmail: duplicateTicket.customer_email,
+        customerName: duplicateTicket.customer_name,
+        gmailThreadId: duplicateTicket.inbound_email_thread_id,
+        subject: duplicateTicket.subject,
         supabase,
-        ticketId: existingTicket.ticket_id
+        ticketId: duplicateTicket.ticket_id
       });
     }
 
     return NextResponse.json({
       duplicate: true,
-      ticketId: existingTicket.ticket_id
+      ticketId: duplicateTicket.ticket_id
+    });
+  }
+
+  // Check if this is a reply to an existing ticket thread
+  const { data: threadTicket } = inReplyTo
+    ? await supabase
+        .from("tickets")
+        .select("ticket_id, subject, customer_email, customer_name, customer_notified_at, inbound_email_thread_id")
+        .eq("inbound_email_thread_id", inReplyTo)
+        .maybeSingle<ExistingTicket>()
+    : { data: null };
+
+  if (threadTicket) {
+    // Log the reply email so it's visible in the audit trail
+    await supabase.from("inbound_email_events").insert({
+      provider: "postmark",
+      provider_message_id: emailId,
+      provider_thread_id: threadId,
+      sender_email: sender.email,
+      sender_name: sender.name,
+      subject,
+      body_text: body,
+      received_at: receivedAt.toISOString(),
+      raw_payload: payload,
+      processing_status: "Processed",
+      ticket_id: threadTicket.ticket_id
+    });
+
+    return NextResponse.json({
+      reply: true,
+      ticketId: threadTicket.ticket_id
     });
   }
 
@@ -130,7 +166,7 @@ export async function POST(request: Request) {
       reported_by: sender.name,
       channel_received: "Email",
       issue_category: "Inquiry",
-      sub_category: "Other",
+      sub_category: null,
       subject,
       issue_description: body,
       interaction_mode: "Inbound",

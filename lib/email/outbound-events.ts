@@ -195,14 +195,13 @@ async function queueTicketEmail({
 
     return true;
   } catch (error) {
-    // If sending fails, mark event as Failed and return false
     const errorMessage =
       error instanceof Error ? error.message : "Unknown Postmark error";
 
     await supabase
       .from("outbound_email_events")
       .update({
-        status: "Failed",
+        status: "Pending",
         error_message: errorMessage
       })
       .eq("event_id", eventId);
