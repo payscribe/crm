@@ -201,7 +201,7 @@ async function queueTicketEmail({
     await supabase
       .from("outbound_email_events")
       .update({
-        status: "Pending",
+        status: "Failed",
         error_message: errorMessage
       })
       .eq("event_id", eventId);
