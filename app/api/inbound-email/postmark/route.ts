@@ -57,9 +57,22 @@ export async function POST(request: Request) {
   const body = payload.TextBody || stripHtml(payload.HtmlBody);
   const dateStr = payload.Date;
   const receivedAt = parseDate(dateStr);
+  const replyToHeader = payload.Headers?.find(
+    (h) => h.Name.toLowerCase() === "reply-to"
+  )?.Value;
+  const replyToEmail = replyToHeader ? extractEmail(replyToHeader) : null;
+  const replyToName = replyToHeader ? extractName(replyToHeader) : null;
+
+  const rawFrom = payload.FromFull?.Email ?? payload.From;
+  const isForwardedFrom =
+    replyToEmail &&
+    replyToEmail.toLowerCase() !== rawFrom.toLowerCase();
+
   const sender = {
-    email: payload.FromFull?.Email ?? payload.From,
-    name: payload.FromFull?.Name ?? null
+    email: isForwardedFrom ? replyToEmail : rawFrom,
+    name: isForwardedFrom
+      ? (replyToName ?? payload.FromFull?.Name ?? null)
+      : (payload.FromFull?.Name ?? null)
   };
 
   if (!emailId || !sender.email || !body) {
@@ -319,6 +332,16 @@ function stripHtml(value: unknown) {
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
     .trim();
+}
+
+function extractEmail(value: string) {
+  const match = value.match(/<([^>]+)>/);
+  return match ? match[1].trim() : value.trim();
+}
+
+function extractName(value: string) {
+  const match = value.match(/^([^<]+)<[^>]+>/);
+  return match ? match[1].trim().replace(/^"|"$/g, "") : null;
 }
 
 async function markInboundEvent(
