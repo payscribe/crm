@@ -82,6 +82,11 @@ export async function POST(request: Request) {
     );
   }
 
+  // Ignore automated/internal mail — return 200 so Postmark doesn't retry
+  if (shouldIgnoreEmail(payload, sender.email)) {
+    return NextResponse.json({ ignored: true, reason: "automated or internal email" });
+  }
+
   const supabase = createSupabaseAdminClient();
 
   type ExistingTicket = {
@@ -342,6 +347,74 @@ function extractEmail(value: string) {
 function extractName(value: string) {
   const match = value.match(/^([^<]+)<[^>]+>/);
   return match ? match[1].trim().replace(/^"|"$/g, "") : null;
+}
+
+function shouldIgnoreEmail(
+  payload: PostmarkInboundWebhookPayload,
+  senderEmail: string
+): boolean {
+  const headers = payload.Headers ?? [];
+  const header = (name: string) =>
+    headers.find((h) => h.Name.toLowerCase() === name.toLowerCase())?.Value ?? "";
+
+  const autoSubmitted = header("Auto-Submitted").toLowerCase();
+  const precedence = header("Precedence").toLowerCase();
+  const xAutoreply = header("X-Autoreply").toLowerCase();
+  const xAutoResponseSuppress = header("X-Auto-Response-Suppress").toLowerCase();
+  const listId = header("List-Id");
+  const listUnsubscribe = header("List-Unsubscribe");
+  const contentType = header("Content-Type").toLowerCase();
+  const subject = (payload.Subject ?? "").toLowerCase().trim();
+  const from = senderEmail.toLowerCase();
+
+  // Auto-submitted header (calendar invites, OOO, delivery reports)
+  if (autoSubmitted && autoSubmitted !== "no") return true;
+
+  // Autoreply / OOO headers
+  if (xAutoreply === "yes") return true;
+  if (xAutoResponseSuppress) return true;
+
+  // Mailing lists / newsletters / bulk mail
+  if (listId || listUnsubscribe) return true;
+  if (["bulk", "list", "junk"].includes(precedence)) return true;
+
+  // Delivery receipts and bounce reports
+  if (contentType.includes("multipart/report")) return true;
+
+  // OOO / automatic reply subjects
+  if (
+    /^(out of office|automatic reply|auto:|autoreply:|away:|vacation:|i am out|i'm out)/i.test(
+      subject
+    )
+  )
+    return true;
+
+  // No-reply / mailer-daemon sender addresses
+  if (/no.?reply|do.not.reply|mailer.?daemon|postmaster|bounce/i.test(from))
+    return true;
+
+  // Internal payscribe staff emails
+  if (from.endsWith("@payscribe.co")) return true;
+
+  // Known social / notification domains
+  const notificationDomains = [
+    "facebookmail.com",
+    "notifications.linkedin.com",
+    "twitter.com",
+    "instagram.com",
+    "github.com",
+    "atlassian.com",
+    "slack.com",
+    "notifications.google.com",
+    "calendar.google.com"
+  ];
+  if (notificationDomains.some((d) => from.endsWith(`@${d}`) || from.endsWith(`.${d}`)))
+    return true;
+
+  // Transactional billing / receipt senders (not support requests)
+  if (/^(receipts?|invoices?|billing|payments?|statements?)@/i.test(from)) return true;
+
+  return false;
 }
 
 async function markInboundEvent(
