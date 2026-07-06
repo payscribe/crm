@@ -769,11 +769,21 @@ export async function updateTicket(formData: FormData) {
   if (values.assignedTo && previousTicket?.assigned_to !== values.assignedTo) {
     try {
       const supabaseAdmin = createSupabaseAdminClient();
-      const { data: staffMembers } = await supabaseAdmin
-        .from("users")
-        .select("*")
-        .eq("status", "Active")
-        .returns<StaffUser[]>();
+      const [
+        { data: staffMembers },
+        { data: ticket }
+      ] = await Promise.all([
+        supabaseAdmin
+          .from("users")
+          .select("*")
+          .eq("status", "Active")
+          .returns<StaffUser[]>(),
+        supabaseAdmin
+          .from("tickets")
+          .select("issue_description, sla_deadline")
+          .eq("ticket_id", ticketId)
+          .maybeSingle<{ issue_description: string; sla_deadline: string | null }>()
+      ]);
 
       await deliverSlackEventsImmediately({
         supabase: supabaseAdmin,
@@ -782,8 +792,9 @@ export async function updateTicket(formData: FormData) {
           ticketAssignmentEvent({
             assignedTo: values.assignedTo,
             businessName: businessContact?.business_name ?? values.businessId,
+            description: ticket?.issue_description ?? "",
             priority: values.priority,
-            slaDeadline: null,
+            slaDeadline: ticket?.sla_deadline ?? null,
             subject: values.subject,
             ticketId
           })
