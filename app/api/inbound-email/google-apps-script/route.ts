@@ -188,11 +188,12 @@ async function notifySlackForInboundTicket({
 
     const { data: ticket } = await supabase
       .from("tickets")
-      .select("ticket_id, subject, business_id, issue_category, sub_category, priority, status, assigned_to, sla_deadline, customer_email")
+      .select("ticket_id, subject, issue_description, business_id, issue_category, sub_category, priority, status, assigned_to, sla_deadline, customer_email")
       .eq("ticket_id", ticketId)
       .maybeSingle<{
         ticket_id: string;
         subject: string;
+        issue_description: string;
         business_id: string | null;
         issue_category: string;
         sub_category: string | null;
@@ -219,6 +220,7 @@ async function notifySlackForInboundTicket({
       assignedTo: ticket.assigned_to ?? "Unassigned",
       businessName: business?.business_name ?? "Unmatched email",
       businessOwner: business?.owner_name,
+      description: ticket.issue_description,
       category: ticket.issue_category,
       priority: ticket.priority,
       sla: ticket.sla_deadline,

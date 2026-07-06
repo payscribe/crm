@@ -5,6 +5,32 @@ function cleanValue(value: SlackFieldValue) {
   return text.length > 0 ? text.replace(/```/g, "'''") : "Not set";
 }
 
+export function formatDateForSlack(dateString: SlackFieldValue) {
+  if (!dateString) {
+    return "Not set";
+  }
+  
+  try {
+    const date = new Date(String(dateString));
+    if (isNaN(date.getTime())) {
+      return "Invalid date";
+    }
+    
+    // Format: "Mon, Jun 29, 2026 3:45 PM"
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    });
+  } catch {
+    return "Invalid date";
+  }
+}
+
 export function slackFieldTable(
   title: string,
   fields: Array<[label: string, value: SlackFieldValue]>
@@ -45,6 +71,7 @@ export function ticketOpenedSlackMessage({
   businessName,
   businessOwner,
   category,
+  description,
   priority,
   sla,
   subCategory,
@@ -55,6 +82,7 @@ export function ticketOpenedSlackMessage({
   businessName?: SlackFieldValue;
   businessOwner?: SlackFieldValue;
   category?: SlackFieldValue;
+  description?: SlackFieldValue;
   priority?: SlackFieldValue;
   sla?: SlackFieldValue;
   subCategory?: SlackFieldValue;
@@ -66,11 +94,12 @@ export function ticketOpenedSlackMessage({
     ["Business Name", businessName],
     ["Business Owner", businessOwner],
     ["Subject", subject],
+    ["Description", description],
     ["Category", category],
     ["Sub category", subCategory],
     ["Priority", priority],
     ["Assigned to", assignedTo],
-    ["SLA", sla]
+    ["SLA Deadline", formatDateForSlack(sla)]
   ]);
 }
 
@@ -78,6 +107,7 @@ export function ticketAssignedSlackMessage({
   assignedTo,
   businessName,
   category,
+  description,
   priority,
   sla,
   subCategory,
@@ -87,6 +117,7 @@ export function ticketAssignedSlackMessage({
   assignedTo?: SlackFieldValue;
   businessName?: SlackFieldValue;
   category?: SlackFieldValue;
+  description?: SlackFieldValue;
   priority?: SlackFieldValue;
   sla?: SlackFieldValue;
   subCategory?: SlackFieldValue;
@@ -97,11 +128,12 @@ export function ticketAssignedSlackMessage({
     ["Ticket ID", ticketId],
     ["Business Name", businessName],
     ["Subject", subject],
+    ["Description", description],
     ["Category", category],
     ["Sub category", subCategory],
     ["Priority", priority],
     ["Assigned to", assignedTo],
-    ["SLA", sla]
+    ["SLA Deadline", formatDateForSlack(sla)]
   ]);
 }
 

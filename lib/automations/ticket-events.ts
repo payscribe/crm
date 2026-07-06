@@ -3,6 +3,7 @@ import type { Business } from "@/lib/types/businesses";
 import type { Ticket } from "@/lib/types/tickets";
 import type { StaffUser } from "@/lib/types/users";
 import {
+  formatDateForSlack,
   slackFieldTable,
   ticketAssignedSlackMessage,
   ticketOpenedSlackMessage,
@@ -128,6 +129,7 @@ export function buildTicketAutomationEvents({
             businessOwner: ticket.business_id
               ? businessById.get(ticket.business_id)?.owner_name
               : null,
+            description: ticket.issue_description,
             category: ticket.issue_category,
             priority: ticket.priority,
             sla: ticket.sla_deadline,
@@ -155,6 +157,7 @@ export function buildTicketAutomationEvents({
           message: ticketAssignedSlackMessage({
             assignedTo: owner?.full_name,
             businessName: name,
+            description: ticket.issue_description,
             category: ticket.issue_category,
             priority: ticket.priority,
             sla: ticket.sla_deadline,
@@ -185,7 +188,7 @@ export function buildTicketAutomationEvents({
             ["Status", ticket.status],
             ["Priority", ticket.priority],
             ["Assigned to", owner?.full_name],
-            ["SLA", ticket.sla_deadline],
+            ["SLA Deadline", formatDateForSlack(ticket.sla_deadline)],
             ["Action", "Update the ticket if you are working on it"]
           ]),
           payload: {

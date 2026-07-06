@@ -214,6 +214,7 @@ async function validateTicketForm(
 type TicketThreadInfo = {
   ticket_id: string;
   subject: string;
+  issue_description: string;
   business_id: string | null;
   issue_category: string;
   sub_category: string | null;
@@ -303,6 +304,7 @@ async function createBusinessFromTicketForm({
 function ticketAssignmentEvent({
   assignedTo,
   businessName,
+  description,
   priority,
   slaDeadline,
   subject,
@@ -310,6 +312,7 @@ function ticketAssignmentEvent({
 }: {
   assignedTo: string;
   businessName: string;
+  description: string;
   priority: string;
   slaDeadline: string | null;
   subject: string;
@@ -324,6 +327,7 @@ function ticketAssignmentEvent({
     message: ticketAssignedSlackMessage({
       assignedTo,
       businessName,
+      description,
       priority,
       sla: slaDeadline,
       subject,
@@ -347,7 +351,7 @@ async function tryGetTicketThreadInfo(
   const { data } = await supabaseAdmin
     .from("tickets")
     .select(
-      "ticket_id, subject, business_id, issue_category, sub_category, priority, status, assigned_to, sla_deadline, resolution_notes, slack_channel_id, slack_thread_ts"
+      "ticket_id, subject, issue_description, business_id, issue_category, sub_category, priority, status, assigned_to, sla_deadline, resolution_notes, slack_channel_id, slack_thread_ts"
     )
     .eq("ticket_id", ticketId)
     .maybeSingle<TicketThreadInfo>();
@@ -401,6 +405,7 @@ async function ensureTicketSlackThread({
     assignedTo: assignee?.full_name ?? "Unassigned",
     businessName: business?.business_name ?? ticket.business_id ?? "Unmatched email",
     businessOwner: business?.owner_name,
+    description: ticket.issue_description,
     category: ticket.issue_category,
     priority: ticket.priority,
     sla: ticket.sla_deadline,
@@ -612,6 +617,7 @@ export async function createTicket(formData: FormData) {
             ticketAssignmentEvent({
               assignedTo: ticket.assigned_to,
               businessName: businessContact?.business_name ?? ticket.business_id ?? "Unmatched email",
+              description: ticket.issue_description,
               priority: ticket.priority,
               slaDeadline: ticket.sla_deadline,
               subject: ticket.subject,
