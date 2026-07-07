@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 type FormModalProps = {
@@ -21,6 +22,19 @@ export function FormModal({
   const titleId = useId();
   const descriptionId = useId();
   const modalRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const routeKey = `${pathname}?${searchParams.toString()}`;
+  const previousRouteKeyRef = useRef(routeKey);
+
+  useEffect(() => {
+    if (previousRouteKeyRef.current === routeKey) {
+      return;
+    }
+
+    previousRouteKeyRef.current = routeKey;
+    setOpen(false);
+  }, [routeKey]);
 
   useEffect(() => {
     if (!open || !modalRef.current) {

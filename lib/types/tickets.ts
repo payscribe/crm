@@ -18,6 +18,8 @@ export type TicketAccountStatus =
 
 export type TicketStatus = "Open" | "Closed";
 
+export type TicketSource = "Manual" | "Email" | "Widget";
+
 export type Ticket = {
   ticket_id: string;
   business_id: string | null;
@@ -43,7 +45,7 @@ export type Ticket = {
   linked_product_event_id: string | null;
   needs_reassignment: boolean;
   created_by: string | null;
-  source: "Manual" | "Email";
+  source: TicketSource;
   customer_email: string | null;
   customer_name: string | null;
   inbound_email_body: string | null;
@@ -51,6 +53,22 @@ export type Ticket = {
   inbound_email_thread_id: string | null;
   customer_notified_at: string | null;
   closure_notified_at: string | null;
+  service_id: string | null;
+  widget_transaction_id: string | null;
+  widget_session_id: string | null;
+  widget_attachments: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type SupportWidgetSession = {
+  session_id: string;
+  merchant_id: string;
+  started_at: string;
+  last_step_completed: string;
+  completed: boolean;
+  ticket_reference: string | null;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
