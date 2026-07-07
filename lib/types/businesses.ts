@@ -72,7 +72,30 @@ export type Business = {
   current_transaction_volume: number;
   indemnity_form_on_file: boolean;
   needs_reassignment: boolean;
+  external_business_id: string | null;
+  external_uid: string | null;
+  external_status: string | null;
+  external_last_modified: string | null;
+  country_code: string | null;
+  risk_score: number | null;
+  risk_level: string | null;
   notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BusinessSyncRun = {
+  sync_id: string;
+  started_at: string;
+  completed_at: string | null;
+  status: "Running" | "Completed" | "Failed";
+  filters: Record<string, unknown>;
+  records_returned: number;
+  records_created: number;
+  records_updated: number;
+  records_skipped: number;
+  error_message: string | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 };

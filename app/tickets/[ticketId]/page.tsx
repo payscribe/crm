@@ -218,6 +218,21 @@ export default async function TicketDetailPage({
           </div>
         ) : null}
 
+        {ticket.source === "Widget" ? (
+          <div className="mt-6 rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            <div className="font-semibold">Merchant widget ticket</div>
+            <div className="mt-1">
+              Service: {ticket.sub_category ?? ticket.service_id ?? "Not set"}
+            </div>
+            <div className="mt-1">
+              Transaction ID: {ticket.widget_transaction_id ?? "Not provided"}
+            </div>
+            <div className="mt-1">
+              Session ID: {ticket.widget_session_id ?? "Not recorded"}
+            </div>
+          </div>
+        ) : null}
+
         <form
           action={updateTicket}
           className="mt-6 rounded border border-neutral-200 bg-white p-5"
