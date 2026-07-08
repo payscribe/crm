@@ -13,6 +13,10 @@
     (currentScript && currentScript.getAttribute("data-api-base")) ||
     config.apiBase ||
     scriptOrigin;
+  var logoUrl =
+    (currentScript && currentScript.getAttribute("data-logo-url")) ||
+    config.logoUrl ||
+    scriptOrigin.replace(/\/$/, "") + "/payscribe-logo.png";
   var sessionId =
     "sw_" +
     Date.now().toString(36) +
@@ -73,14 +77,34 @@
     });
   }
 
+  function formatSupportDate(value) {
+    if (!value) {
+      return "Not available";
+    }
+
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short"
+      }).format(date);
+    } catch (error) {
+      return date.toLocaleString();
+    }
+  }
+
   var style = createElement("style");
   style.textContent =
     ".ps-support-button{position:fixed;right:20px;bottom:20px;z-index:2147483000;display:grid;place-items:center;width:58px;height:58px;border:0;border-radius:999px;background:#3362b0;color:#fff;padding:0;box-shadow:0 12px 30px rgba(17,17,17,.22);cursor:pointer}" +
     ".ps-support-button svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}" +
     ".ps-support-panel{position:fixed;right:20px;bottom:78px;z-index:2147483000;width:min(380px,calc(100vw - 32px));max-height:min(620px,calc(100vh - 104px));overflow:auto;border:1px solid #e5e5e5;border-radius:12px;background:#fff;color:#111;font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 18px 45px rgba(17,17,17,.18)}" +
     ".ps-support-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:14px 16px}" +
-    ".ps-support-title{font-weight:700}.ps-support-close{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#555}" +
-    ".ps-support-body{padding:16px}.ps-support-body p{margin:0 0 12px}.ps-support-muted{color:#666;font-size:12px}.ps-support-actions{display:grid;gap:8px;margin-top:12px}" +
+    ".ps-support-brand{display:flex;align-items:center;gap:10px;min-width:0}.ps-support-logo{display:block;width:128px;height:auto;max-height:40px;object-fit:contain;object-position:left center;flex:0 0 auto;background:transparent!important;border-radius:0!important;padding:0!important}.ps-support-title{font-weight:700;color:#333;white-space:nowrap}.ps-support-close{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#555}" +
+    ".ps-support-body{padding:16px}.ps-support-body p{margin:0 0 12px}.ps-support-muted{color:#666;font-size:12px}.ps-support-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}.ps-support-actions button{flex:1 1 150px;min-height:44px}" +
     ".ps-support-input,.ps-support-select,.ps-support-textarea{width:100%;box-sizing:border-box;border:1px solid #d4d4d4;border-radius:8px;padding:10px 11px;font:14px system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;outline:none}" +
     ".ps-support-textarea{min-height:110px;resize:vertical}.ps-support-primary,.ps-support-secondary{border:0;border-radius:8px;padding:10px 12px;font-weight:700;cursor:pointer}" +
     ".ps-support-primary{background:#3362b0;color:#fff}.ps-support-secondary{background:#f5f5f5;color:#222}.ps-support-error{border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:10px;margin-bottom:12px}" +
@@ -96,7 +120,13 @@
   panel.hidden = true;
 
   var header = createElement("div", "ps-support-header");
-  header.appendChild(createElement("div", "ps-support-title", "Payscribe Support"));
+  var brand = createElement("div", "ps-support-brand");
+  var logo = createElement("img", "ps-support-logo");
+  logo.src = logoUrl;
+  logo.alt = "Payscribe";
+  brand.appendChild(logo);
+  brand.appendChild(createElement("div", "ps-support-title", "Support"));
+  header.appendChild(brand);
   var close = createElement("button", "ps-support-close", "x");
   close.setAttribute("aria-label", "Close support widget");
   header.appendChild(close);
@@ -311,7 +341,7 @@
         .then(function (result) {
           clearBody();
           body.appendChild(createElement("div", "ps-support-success", "Status: " + result.status));
-          body.appendChild(createElement("p", "ps-support-muted", "Last updated: " + result.last_updated));
+          body.appendChild(createElement("p", "ps-support-muted", "Last updated: " + formatSupportDate(result.last_updated)));
           if (result.last_agent_note) {
             body.appendChild(createElement("p", "", result.last_agent_note));
           }
