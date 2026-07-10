@@ -48,18 +48,37 @@ export async function GET(request: Request, { params }: TicketLookupProps) {
     return supportJson(request, { error: "Ticket not found" }, { status: 404 });
   }
 
-  const { data: latestNote } = await supabase
+  const { data: notes } = await supabase
     .from("ticket_notes")
-    .select("note_body, created_at")
+    .select("note_id, note_body, created_at")
     .eq("ticket_id", ticket.ticket_id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ note_body: string; created_at: string }>();
+    .order("created_at", { ascending: true })
+    .limit(25)
+    .returns<Array<{ note_id: string; note_body: string; created_at: string }>>();
+
+  const responses = (notes ?? []).map((note) => ({
+    id: note.note_id,
+    author: "Support",
+    body: note.note_body,
+    created_at: note.created_at
+  }));
+
+  if (ticket.resolution_notes) {
+    responses.push({
+      id: `${ticket.ticket_id}:resolution`,
+      author: "Support",
+      body: ticket.resolution_notes,
+      created_at: ticket.updated_at
+    });
+  }
+
+  const latestResponse = responses[responses.length - 1] ?? null;
 
   return supportJson(request, {
     ticket_reference: ticket.ticket_id,
     status: publicTicketStatus(ticket.status),
-    last_updated: latestNote?.created_at ?? ticket.updated_at,
-    last_agent_note: latestNote?.note_body ?? ticket.resolution_notes ?? null
+    last_updated: latestResponse?.created_at ?? ticket.updated_at,
+    last_agent_note: latestResponse?.body ?? null,
+    responses
   });
 }
