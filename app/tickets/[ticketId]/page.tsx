@@ -2,6 +2,12 @@ import { AppShell } from "@/components/app-shell";
 import { AddTicketNoteForm } from "@/components/tickets/add-ticket-note-form";
 import { CloseTicketForm } from "@/components/tickets/close-ticket-form";
 import { StatusAlert } from "@/components/ui/status-alert";
+import {
+  StatusBadge,
+  ticketPriorityTone,
+  ticketStatusLabel,
+  ticketStatusTone
+} from "@/components/ui/status-badge";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import type { Business } from "@/lib/types/businesses";
@@ -159,15 +165,21 @@ export default async function TicketDetailPage({
         <div className="mt-6 grid gap-4 md:grid-cols-4">
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Priority</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
-              {ticket.priority}
-            </p>
+            <div className="mt-3">
+              <StatusBadge
+                label={ticket.priority}
+                tone={ticketPriorityTone(ticket.priority)}
+              />
+            </div>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Status</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
-              {ticket.status}
-            </p>
+            <div className="mt-3">
+              <StatusBadge
+                label={ticketStatusLabel(ticket.status)}
+                tone={ticketStatusTone(ticket.status)}
+              />
+            </div>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">

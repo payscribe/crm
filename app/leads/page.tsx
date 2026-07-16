@@ -4,6 +4,11 @@ import { FormModal } from "@/components/ui/form-modal";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusAlert } from "@/components/ui/status-alert";
+import {
+  leadStageTone,
+  leadStatusTone,
+  StatusBadge
+} from "@/components/ui/status-badge";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import {
@@ -467,13 +472,17 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                         {lead.lead_id} - {lead.business_name ?? "No business"}
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {lead.stage}
+                    <td className="px-4 py-4">
+                      <StatusBadge
+                        label={lead.stage}
+                        tone={leadStageTone(lead.stage)}
+                      />
                     </td>
                     <td className="px-4 py-4">
-                      <span className="rounded border border-neutral-200 px-2 py-1 text-xs font-semibold text-neutral-700">
-                        {lead.status}
-                      </span>
+                      <StatusBadge
+                        label={lead.status}
+                        tone={leadStatusTone(lead.status)}
+                      />
                     </td>
                     <td className="px-4 py-4 text-neutral-700">
                       {lead.source}

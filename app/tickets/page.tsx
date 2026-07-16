@@ -6,6 +6,12 @@ import { FormModal } from "@/components/ui/form-modal";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusAlert } from "@/components/ui/status-alert";
+import {
+  StatusBadge,
+  ticketPriorityTone,
+  ticketStatusLabel,
+  ticketStatusTone
+} from "@/components/ui/status-badge";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import type { Business } from "@/lib/types/businesses";
@@ -32,6 +38,7 @@ type TicketsPageProps = {
     priority?: string;
     status?: string;
     category?: string;
+    assigned_to?: string;
     error?: string;
     success?: string;
   };
@@ -78,6 +85,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const priority = searchParams?.priority ?? "";
   const status = searchParams?.status ?? "";
   const category = searchParams?.category ?? "";
+  const assignedTo = searchParams?.assigned_to ?? "";
 
   let ticketsQuery = supabase.from("tickets").select("*");
 
@@ -97,6 +105,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
   if (ticketCategories.includes(category as never)) {
     ticketsQuery = ticketsQuery.eq("issue_category", category);
+  }
+
+  if (assignedTo === "unassigned") {
+    ticketsQuery = ticketsQuery.is("assigned_to", null);
+  } else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assignedTo)) {
+    ticketsQuery = ticketsQuery.eq("assigned_to", assignedTo);
   }
 
   const [
@@ -198,7 +212,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         ) : null}
 
         <div className="mt-6 rounded border border-neutral-200 bg-white p-4">
-          <form className="grid gap-3 lg:grid-cols-[1fr_180px_180px_210px_auto]">
+          <form className="grid gap-3 lg:grid-cols-[1fr_170px_170px_190px_210px_auto]">
             <input
               name="q"
               defaultValue={query}
@@ -238,6 +252,19 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
               {ticketCategories.map((item) => (
                 <option key={item} value={item}>
                   {item}
+                </option>
+              ))}
+            </select>
+            <select
+              name="assigned_to"
+              defaultValue={assignedTo}
+              className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+            >
+              <option value="">All assignees</option>
+              <option value="unassigned">Unassigned</option>
+              {(staffMembers ?? []).map((staffMember) => (
+                <option key={staffMember.user_id} value={staffMember.user_id}>
+                  {staffMember.full_name}
                 </option>
               ))}
             </select>
@@ -281,12 +308,16 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
                         : "Unmatched email"}
                     </td>
                     <td className="px-4 py-4">
-                      <span className="rounded border border-neutral-200 px-2 py-1 text-xs font-semibold text-neutral-700">
-                        {ticket.priority}
-                      </span>
+                      <StatusBadge
+                        label={ticket.priority}
+                        tone={ticketPriorityTone(ticket.priority)}
+                      />
                     </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {ticket.status}
+                    <td className="px-4 py-4">
+                      <StatusBadge
+                        label={ticketStatusLabel(ticket.status)}
+                        tone={ticketStatusTone(ticket.status)}
+                      />
                     </td>
                     <td className="px-4 py-4 text-neutral-700">
                       {ticket.assigned_to

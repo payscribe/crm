@@ -346,8 +346,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const leadRecords = (leads ?? []).filter((lead) =>
     isWithinDateRange(lead.created_at, from, to)
   );
-  const ticketRecords = (tickets ?? []).filter((ticket) =>
+  const allTicketRecords = tickets ?? [];
+  const ticketRecords = allTicketRecords.filter((ticket) =>
     isWithinDateRange(ticket.date_raised, from, to)
+  );
+  const resolvedTicketRecords = allTicketRecords.filter(
+    (ticket) => ticket.resolved_date && isWithinDateRange(ticket.resolved_date, from, to)
   );
   const partnerRecords = (partners ?? []).filter((partner) =>
     isWithinDateRange(partner.created_at, from, to)
@@ -370,8 +374,11 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   const openTickets = ticketRecords.filter(isOpenTicket);
   const breachedTickets = ticketRecords.filter(isSlaBreached);
-  const resolvedThisMonth = ticketRecords.filter(
+  const resolvedThisMonth = allTicketRecords.filter(
     (ticket) => ticket.resolved_date && isThisMonth(ticket.resolved_date)
+  );
+  const resolvedByCurrentUser = resolvedTicketRecords.filter(
+    (ticket) => ticket.assigned_to === currentUser.user_id
   );
   const resolutionAverage = average(
     resolvedThisMonth
@@ -614,6 +621,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     <tr>
                       <th className="px-4 py-3">Team member</th>
                       <th className="px-4 py-3">Assigned</th>
+                      <th className="px-4 py-3">Resolved</th>
                       <th className="px-4 py-3">Open</th>
                       <th className="px-4 py-3">Avg resolution</th>
                       <th className="px-4 py-3">SLA breach rate</th>
@@ -624,9 +632,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       const assigned = ticketRecords.filter(
                         (ticket) => ticket.assigned_to === member.user_id
                       );
+                      const resolved = resolvedTicketRecords.filter(
+                        (ticket) => ticket.assigned_to === member.user_id
+                      );
                       const openAssigned = assigned.filter(isOpenTicket);
                       const averageResolution = average(
-                        assigned
+                        resolved
                           .map((ticket) => ticket.resolution_time_hours)
                           .filter((value): value is number => typeof value === "number")
                       );
@@ -635,6 +646,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                         <tr key={member.user_id}>
                           <td className="px-4 py-4 font-medium text-neutral-950">{member.full_name}</td>
                           <td className="px-4 py-4 text-neutral-700">{assigned.length}</td>
+                          <td className="px-4 py-4 font-semibold text-emerald-700">{resolved.length}</td>
                           <td className="px-4 py-4 text-neutral-700">{openAssigned.length}</td>
                           <td className="px-4 py-4 text-neutral-700">{averageResolution.toFixed(1)}h</td>
                           <td className="px-4 py-4 text-neutral-700">{percent(assigned.filter(isSlaBreached).length, openAssigned.length)}</td>
@@ -643,6 +655,33 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     })}
                   </tbody>
                 </table>
+              </div>
+            </section>
+            <section className="rounded border border-neutral-200 bg-white p-5">
+              <h3 className="text-base font-semibold text-neutral-950">Resolved Tickets</h3>
+              <p className="mt-1 text-sm text-neutral-600">
+                Counts use resolved date within the selected report period.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <MetricCard
+                  label="Resolved by Me"
+                  value={resolvedByCurrentUser.length}
+                  density="compact"
+                />
+                <MetricCard
+                  label="Resolved by Team"
+                  value={resolvedTicketRecords.length}
+                  density="compact"
+                />
+                <MetricCard
+                  label="Avg Resolution"
+                  value={`${average(
+                    resolvedTicketRecords
+                      .map((ticket) => ticket.resolution_time_hours)
+                      .filter((value): value is number => typeof value === "number")
+                  ).toFixed(1)}h`}
+                  density="compact"
+                />
               </div>
             </section>
             <ReportRecordTable

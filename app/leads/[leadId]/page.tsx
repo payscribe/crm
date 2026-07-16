@@ -2,6 +2,11 @@ import { AppShell } from "@/components/app-shell";
 import { LeadDangerActions } from "@/components/leads/lead-danger-actions";
 import { LeadStageStatusForm } from "@/components/leads/lead-stage-status-form";
 import { StatusAlert } from "@/components/ui/status-alert";
+import {
+  leadStageTone,
+  leadStatusTone,
+  StatusBadge
+} from "@/components/ui/status-badge";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import {
@@ -160,15 +165,18 @@ export default async function LeadDetailPage({
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Stage</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
-              {lead.stage}
-            </p>
+            <div className="mt-3">
+              <StatusBadge label={lead.stage} tone={leadStageTone(lead.stage)} />
+            </div>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Status</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
-              {lead.status}
-            </p>
+            <div className="mt-3">
+              <StatusBadge
+                label={lead.status}
+                tone={leadStatusTone(lead.status)}
+              />
+            </div>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">
