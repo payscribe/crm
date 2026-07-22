@@ -31,6 +31,8 @@ export type LeadStatus =
   | "Closed Won"
   | "Closed Lost";
 
+export type LeadPriority = "Critical" | "High" | "Medium" | "Low";
+
 export type Lead = {
   lead_id: string;
   full_name: string;
@@ -42,6 +44,7 @@ export type Lead = {
   product_interest: LeadProductInterest[];
   stage: LeadStage;
   status: LeadStatus;
+  priority: LeadPriority;
   assigned_to: string;
   last_contact_date: string | null;
   next_followup_date: string;

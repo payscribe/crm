@@ -3,6 +3,7 @@ import type { UserPermission } from "@/lib/types/permissions";
 import type { StaffUser } from "@/lib/types/users";
 import { signOut } from "@/app/login/actions";
 import { AppNavigation } from "@/components/app-navigation";
+import { GlobalSearch } from "@/components/global-search";
 import { PayscribeLogo } from "@/components/payscribe-logo";
 
 type AppShellProps = {
@@ -85,6 +86,9 @@ export function AppShell({
                   {currentUser.full_name}
                   </h1>
                 </div>
+              </div>
+              <div className="hidden flex-1 justify-center px-4 md:flex">
+                <GlobalSearch />
               </div>
               <form action={signOut}>
                 <button

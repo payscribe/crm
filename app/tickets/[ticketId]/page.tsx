@@ -1,4 +1,6 @@
 import { AppShell } from "@/components/app-shell";
+import { ActivityTimeline } from "@/components/activity/activity-timeline";
+import { AddTaskButton } from "@/components/tasks/add-task-button";
 import { AddTicketNoteForm } from "@/components/tickets/add-ticket-note-form";
 import { CloseTicketForm } from "@/components/tickets/close-ticket-form";
 import { StatusAlert } from "@/components/ui/status-alert";
@@ -10,6 +12,7 @@ import {
 } from "@/components/ui/status-badge";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
+import { fetchActivityFeed } from "@/lib/activity/feed";
 import type { Business } from "@/lib/types/businesses";
 import {
   ticketAccountStatuses,
@@ -22,7 +25,7 @@ import {
 import { formatDate } from "@/lib/format/date";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getHistoricalAwareTicketSubCategoryOptionsByCategory } from "@/lib/settings/managed-options";
-import type { Ticket, TicketNote } from "@/lib/types/tickets";
+import type { Ticket } from "@/lib/types/tickets";
 import type { StaffUser } from "@/lib/types/users";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -67,7 +70,6 @@ export default async function TicketDetailPage({
     { data: ticket },
     { data: businesses },
     { data: staffMembers },
-    { data: ticketNotes },
     subCategoryOptionState
   ] =
     await Promise.all([
@@ -87,12 +89,6 @@ export default async function TicketDetailPage({
         .eq("status", "Active")
         .order("full_name", { ascending: true })
         .returns<StaffUser[]>(),
-      supabase
-        .from("ticket_notes")
-        .select("*")
-        .eq("ticket_id", params.ticketId)
-        .order("created_at", { ascending: false })
-        .returns<TicketNote[]>(),
       supabase
         .from("tickets")
         .select("issue_category, sub_category")
@@ -123,6 +119,11 @@ export default async function TicketDetailPage({
       staffMember.full_name
     ])
   );
+  const activityEntries = await fetchActivityFeed(
+    supabase,
+    "Ticket",
+    ticket.ticket_id
+  );
   const disabled = !canEdit || ticket.status === "Closed";
   const inputClass =
     "mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20 disabled:bg-neutral-100 disabled:text-neutral-500";
@@ -151,12 +152,19 @@ export default async function TicketDetailPage({
                 : "Unassigned"}
             </p>
           </div>
-          <Link
-            href="/tickets"
-            className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue"
-          >
-            Back to Tickets
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <AddTaskButton
+              entityType="Ticket"
+              entityId={ticket.ticket_id}
+              returnTo={`/tickets/${ticket.ticket_id}`}
+            />
+            <Link
+              href="/tickets"
+              className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue"
+            >
+              Back to Tickets
+            </Link>
+          </div>
         </div>
 
         <StatusAlert type="error" message={searchParams?.error} />
@@ -197,6 +205,12 @@ export default async function TicketDetailPage({
               }`}
             >
               {isSlaBreached(ticket) ? "Breached" : "Within SLA"}
+            </p>
+          </div>
+          <div className="rounded border border-neutral-200 bg-white p-5">
+            <p className="text-sm font-medium text-neutral-500">Created</p>
+            <p className="mt-2 text-xl font-semibold text-neutral-950">
+              {formatDate(ticket.created_at)}
             </p>
           </div>
         </div>
@@ -560,29 +574,15 @@ export default async function TicketDetailPage({
               ticketId={ticket.ticket_id}
             />
           ) : null}
-
-          <div className="mt-5 divide-y divide-neutral-200 rounded border border-neutral-200">
-            {(ticketNotes ?? []).map((note) => (
-              <div key={note.note_id} className="p-4">
-                <div className="flex flex-col gap-1 text-xs text-neutral-500 md:flex-row md:items-center md:justify-between">
-                  <span className="font-semibold text-neutral-700">
-                    {staffById.get(note.created_by) ?? "Team member"}
-                  </span>
-                  <span>{formatDate(note.created_at)}</span>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-neutral-700">
-                  {note.note_body}
-                </p>
-              </div>
-            ))}
-
-            {(ticketNotes ?? []).length === 0 ? (
-              <div className="p-4 text-sm text-neutral-600">
-                No notes have been added yet.
-              </div>
-            ) : null}
-          </div>
         </div>
+
+        <ActivityTimeline
+          entityType="Ticket"
+          entityId={ticket.ticket_id}
+          entries={activityEntries}
+          actorNames={staffById}
+          canCreate={false}
+        />
       </section>
     </AppShell>
   );

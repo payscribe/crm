@@ -10,6 +10,7 @@ import {
 import {
   leadCommunicationChannels,
   leadCommunicationDirections,
+  leadPriorities,
   leadSources,
   leadStages,
   leadStatuses
@@ -275,6 +276,7 @@ export async function createLead(formData: FormData) {
   const source = requiredText(formData, "source");
   const stage = requiredText(formData, "stage") ?? "New";
   const status = requiredText(formData, "status") ?? "Warm";
+  const priority = requiredText(formData, "priority") ?? "Medium";
   const assignedTo = requiredText(formData, "assigned_to");
   const nextFollowupDate = requiredText(formData, "next_followup_date");
   const referralSourceName = optionalText(formData.get("referral_source_name"));
@@ -297,6 +299,10 @@ export async function createLead(formData: FormData) {
 
   if (!leadStatuses.includes(status as never)) {
     redirect("/leads?error=Invalid%20lead%20status");
+  }
+
+  if (!leadPriorities.includes(priority as never)) {
+    redirect("/leads?error=Invalid%20lead%20priority");
   }
 
   const activeProductInterests = await getLeadProductInterestOptions(supabase);
@@ -327,6 +333,7 @@ export async function createLead(formData: FormData) {
       product_interest: productInterest,
       stage,
       status,
+      priority,
       assigned_to: assignedTo,
       next_followup_date: nextFollowupDate,
       last_message_summary: lastMessageSummary,
@@ -394,6 +401,7 @@ async function validateLeadForm(
   const source = requiredText(formData, "source");
   const stage = requiredText(formData, "stage") ?? "New";
   const status = requiredText(formData, "status") ?? "Warm";
+  const priority = requiredText(formData, "priority") ?? "Medium";
   const assignedTo = requiredText(formData, "assigned_to");
   const nextFollowupDate = requiredText(formData, "next_followup_date");
   const referralSourceName = optionalText(formData.get("referral_source_name"));
@@ -416,6 +424,10 @@ async function validateLeadForm(
 
   if (!leadStatuses.includes(status as never)) {
     redirect(`${redirectPath}?error=Invalid%20lead%20status`);
+  }
+
+  if (!leadPriorities.includes(priority as never)) {
+    redirect(`${redirectPath}?error=Invalid%20lead%20priority`);
   }
 
   const activeProductInterests = await getLeadProductInterestOptions(supabase);
@@ -444,6 +456,7 @@ async function validateLeadForm(
     source,
     stage,
     status,
+    priority,
     assignedTo,
     nextFollowupDate,
     referralSourceName,
@@ -495,6 +508,7 @@ export async function updateLead(formData: FormData) {
       product_interest: values.productInterest,
       stage: values.stage,
       status: values.status,
+      priority: values.priority,
       assigned_to: values.assignedTo,
       next_followup_date: values.nextFollowupDate,
       last_message_summary: values.lastMessageSummary,
@@ -900,6 +914,9 @@ export async function bulkUploadLeads(formData: FormData) {
     const status = leadStatuses.includes(get("status") as LeadStatus)
       ? (get("status") as LeadStatus)
       : "Cold";
+    const priority = leadPriorities.includes(get("priority") as never)
+      ? get("priority")
+      : "Medium";
     const source = leadSources.includes(get("source") as typeof leadSources[number])
       ? (get("source") as typeof leadSources[number])
       : null;
@@ -916,6 +933,7 @@ export async function bulkUploadLeads(formData: FormData) {
       product_interest: get("product_interest"),
       stage,
       status,
+      priority,
       assigned_to: assignedTo,
       next_followup_date: nextFollowupDate,
       last_message_summary: get("last_message_summary"),

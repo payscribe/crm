@@ -1,6 +1,7 @@
 import type {
   LeadCommunicationChannel,
   LeadCommunicationDirection,
+  LeadPriority,
   LeadProductInterest,
   LeadSource,
   LeadStage,
@@ -58,6 +59,13 @@ export const leadStatuses: LeadStatus[] = [
   "On Hold",
   "Closed Won",
   "Closed Lost"
+];
+
+export const leadPriorities: LeadPriority[] = [
+  "Critical",
+  "High",
+  "Medium",
+  "Low"
 ];
 
 export const leadCommunicationChannels: LeadCommunicationChannel[] = [

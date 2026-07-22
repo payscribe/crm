@@ -78,6 +78,49 @@ export async function POST(request: Request) {
     });
   }
 
+  // Check whether this sender already has an open ticket from a separate
+  // email thread. Subsequent emails from the same address attach to that
+  // ticket instead of opening a duplicate, until the existing ticket is
+  // closed.
+  const { data: openTicketForSender } = await supabase
+    .from("tickets")
+    .select("ticket_id, subject, customer_email, customer_name, customer_notified_at, inbound_email_thread_id")
+    .eq("status", "Open")
+    .ilike("customer_email", sender.email)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{
+      ticket_id: string;
+      subject: string;
+      customer_email: string | null;
+      customer_name: string | null;
+      customer_notified_at: string | null;
+      inbound_email_thread_id: string | null;
+    }>();
+
+  if (openTicketForSender) {
+    // Log the email so it's visible in the audit trail without opening a
+    // duplicate ticket.
+    await supabase.from("inbound_email_events").insert({
+      provider: "google_apps_script",
+      provider_message_id: emailId,
+      provider_thread_id: threadId,
+      sender_email: sender.email,
+      sender_name: sender.name,
+      subject,
+      body_text: body,
+      received_at: receivedAt.toISOString(),
+      raw_payload: payload,
+      processing_status: "Processed",
+      ticket_id: openTicketForSender.ticket_id
+    });
+
+    return NextResponse.json({
+      reply: true,
+      ticketId: openTicketForSender.ticket_id
+    });
+  }
+
   const { data: business } = await supabase
     .from("businesses")
     .select("business_id, business_name")

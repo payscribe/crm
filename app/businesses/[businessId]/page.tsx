@@ -1,7 +1,10 @@
 import { AppShell } from "@/components/app-shell";
+import { ActivityTimeline } from "@/components/activity/activity-timeline";
+import { AddTaskButton } from "@/components/tasks/add-task-button";
 import { EmptyTableRow } from "@/components/ui/empty-table-row";
 import { StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
+import { fetchActivityFeed } from "@/lib/activity/feed";
 import { formatNaira } from "@/lib/format/currency";
 import { formatDate } from "@/lib/format/date";
 import { hasModulePermission } from "@/lib/permissions/checks";
@@ -53,6 +56,13 @@ export default async function BusinessDetailPage({
 		redirect("/");
 	}
 
+	const canCreate = hasModulePermission(
+		currentUser,
+		permissions,
+		"Businesses",
+		"can_create",
+	);
+
 	const [
 		{ data: business },
 		{ data: staffMembers },
@@ -94,6 +104,11 @@ export default async function BusinessDetailPage({
 			staffMember.full_name,
 		]),
 	);
+	const activityEntries = await fetchActivityFeed(
+		supabase,
+		"Business",
+		business.business_id,
+	);
 
 	return (
 		<AppShell currentUser={currentUser} permissions={permissions}>
@@ -111,12 +126,19 @@ export default async function BusinessDetailPage({
 							ticket and lead history.
 						</p>
 					</div>
-					<Link
-						href='/businesses'
-						className='rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue'
-					>
-						Back to Businesses
-					</Link>
+					<div className='flex flex-wrap gap-2'>
+						<AddTaskButton
+							entityType='Business'
+							entityId={business.business_id}
+							returnTo={`/businesses/${business.business_id}`}
+						/>
+						<Link
+							href='/businesses'
+							className='rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue'
+						>
+							Back to Businesses
+						</Link>
+					</div>
 				</div>
 
 				<StatusAlert type='error' message={searchParams?.error} />
@@ -287,6 +309,14 @@ export default async function BusinessDetailPage({
 						</table>
 					</div>
 				</div>
+
+				<ActivityTimeline
+					entityType='Business'
+					entityId={business.business_id}
+					entries={activityEntries}
+					actorNames={staffById}
+					canCreate={canCreate}
+				/>
 			</section>
 		</AppShell>
 	);

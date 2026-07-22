@@ -1,8 +1,11 @@
 import { AppShell } from "@/components/app-shell";
+import { ActivityTimeline } from "@/components/activity/activity-timeline";
+import { AddTaskButton } from "@/components/tasks/add-task-button";
 import { PartnerTypeField } from "@/components/partners/partner-type-field";
 import { StatusAlert } from "@/components/ui/status-alert";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
+import { fetchActivityFeed } from "@/lib/activity/feed";
 import {
   partnerCommunicationChannels,
   partnerCommunicationDirections,
@@ -12,7 +15,7 @@ import {
 } from "@/lib/constants/partners";
 import { formatDate } from "@/lib/format/date";
 import { hasModulePermission } from "@/lib/permissions/checks";
-import type { Partner, PartnerCommunicationLog } from "@/lib/types/partners";
+import type { Partner } from "@/lib/types/partners";
 import type { StaffUser } from "@/lib/types/users";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -57,7 +60,7 @@ export default async function PartnerDetailPage({
     "can_create"
   );
 
-  const [{ data: partner }, { data: staffMembers }, { data: logs }] =
+  const [{ data: partner }, { data: staffMembers }] =
     await Promise.all([
       supabase
         .from("partners")
@@ -69,13 +72,7 @@ export default async function PartnerDetailPage({
         .select("*")
         .eq("status", "Active")
         .order("full_name", { ascending: true })
-        .returns<StaffUser[]>(),
-      supabase
-        .from("partner_communication_log")
-        .select("*")
-        .eq("partner_id", params.partnerId)
-        .order("date", { ascending: false })
-        .returns<PartnerCommunicationLog[]>()
+        .returns<StaffUser[]>()
     ]);
 
   if (!partner) {
@@ -87,6 +84,11 @@ export default async function PartnerDetailPage({
       staffMember.user_id,
       staffMember.full_name
     ])
+  );
+  const activityEntries = await fetchActivityFeed(
+    supabase,
+    "Partner",
+    partner.partner_id
   );
   const disabled = !canEdit;
   const inputClass =
@@ -112,12 +114,19 @@ export default async function PartnerDetailPage({
                 : "Unassigned"}
             </p>
           </div>
-          <Link
-            href="/partners"
-            className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue"
-          >
-            Back to Partners
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <AddTaskButton
+              entityType="Partner"
+              entityId={partner.partner_id}
+              returnTo={`/partners/${partner.partner_id}`}
+            />
+            <Link
+              href="/partners"
+              className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue"
+            >
+              Back to Partners
+            </Link>
+          </div>
         </div>
 
         <StatusAlert type="error" message={searchParams?.error} />
@@ -467,58 +476,13 @@ export default async function PartnerDetailPage({
           </form>
         ) : null}
 
-        <div className="mt-6 overflow-hidden rounded border border-neutral-200 bg-white">
-          <div className="border-b border-neutral-200 px-4 py-3">
-            <h3 className="text-base font-semibold text-neutral-950">
-              Communication Log
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-neutral-200 text-sm">
-              <thead className="bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                <tr>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Channel</th>
-                  <th className="px-4 py-3">Direction</th>
-                  <th className="px-4 py-3">Summary</th>
-                  <th className="px-4 py-3">Logged By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-200">
-                {(logs ?? []).map((log) => (
-                  <tr key={log.log_id}>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {formatDate(log.date)}
-                    </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {log.channel}
-                    </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {log.direction}
-                    </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {log.summary}
-                    </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {staffById.get(log.logged_by) ?? "Unknown"}
-                    </td>
-                  </tr>
-                ))}
-
-                {(logs ?? []).length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-4 py-8 text-center text-sm text-neutral-500"
-                    >
-                      No communication has been logged yet.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ActivityTimeline
+          entityType="Partner"
+          entityId={partner.partner_id}
+          entries={activityEntries}
+          actorNames={staffById}
+          canCreate={canCreate}
+        />
       </section>
     </AppShell>
   );

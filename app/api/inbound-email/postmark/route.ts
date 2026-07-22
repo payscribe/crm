@@ -132,8 +132,26 @@ export async function POST(request: Request) {
         .maybeSingle<ExistingTicket>()
     : { data: null };
 
-  if (threadTicket) {
-    // Log the reply email so it's visible in the audit trail
+  // Not a direct reply in the same thread - check whether this sender
+  // already has an open ticket from a separate email thread. Subsequent
+  // emails from the same address attach to that ticket instead of opening
+  // a duplicate, until the existing ticket is closed.
+  const { data: openTicketForSender } = !threadTicket
+    ? await supabase
+        .from("tickets")
+        .select("ticket_id, subject, customer_email, customer_name, customer_notified_at, inbound_email_thread_id")
+        .eq("status", "Open")
+        .ilike("customer_email", sender.email)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<ExistingTicket>()
+    : { data: null };
+
+  const existingOpenTicket = threadTicket ?? openTicketForSender;
+
+  if (existingOpenTicket) {
+    // Log the email so it's visible in the audit trail without opening a
+    // duplicate ticket.
     await supabase.from("inbound_email_events").insert({
       provider: "postmark",
       provider_message_id: emailId,
@@ -145,12 +163,12 @@ export async function POST(request: Request) {
       received_at: receivedAt.toISOString(),
       raw_payload: payload,
       processing_status: "Processed",
-      ticket_id: threadTicket.ticket_id
+      ticket_id: existingOpenTicket.ticket_id
     });
 
     return NextResponse.json({
       reply: true,
-      ticketId: threadTicket.ticket_id
+      ticketId: existingOpenTicket.ticket_id
     });
   }
 

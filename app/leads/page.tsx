@@ -5,6 +5,7 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusAlert } from "@/components/ui/status-alert";
 import {
+  leadPriorityTone,
   leadStageTone,
   leadStatusTone,
   StatusBadge
@@ -12,6 +13,7 @@ import {
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import {
+  leadPriorities,
   leadSources,
   leadStages,
   leadStatuses
@@ -19,7 +21,7 @@ import {
 import { formatDate } from "@/lib/format/date";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getLeadProductInterestOptions } from "@/lib/settings/managed-options";
-import type { Lead, LeadStage, LeadStatus } from "@/lib/types/leads";
+import type { Lead, LeadPriority, LeadStage, LeadStatus } from "@/lib/types/leads";
 import type { StaffUser } from "@/lib/types/users";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -32,6 +34,7 @@ type LeadsPageProps = {
     stage?: string;
     status?: string;
     source?: string;
+    priority?: string;
     error?: string;
     success?: string;
   };
@@ -61,6 +64,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const stage = searchParams?.stage ?? "";
   const status = searchParams?.status ?? "";
   const source = searchParams?.source ?? "";
+  const priority = searchParams?.priority ?? "";
 
   let leadsQuery = supabase.from("leads").select("*");
 
@@ -80,6 +84,10 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
 
   if (leadSources.includes(source as never)) {
     leadsQuery = leadsQuery.eq("source", source);
+  }
+
+  if (leadPriorities.includes(priority as LeadPriority)) {
+    leadsQuery = leadsQuery.eq("priority", priority);
   }
 
   const [{ data: leads }, { data: staffMembers }, productInterestOptions] = await Promise.all([
@@ -184,7 +192,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 </div>
                 <div className="rounded border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-600 leading-5">
                   <strong className="text-neutral-800">Required columns:</strong> <code>full_name</code>, <code>phone</code><br />
-                  <strong className="text-neutral-800">Optional columns:</strong> <code>business_name</code>, <code>email</code>, <code>source</code>, <code>referral_source_name</code>, <code>product_interest</code>, <code>stage</code>, <code>status</code>, <code>assigned_to_email</code>, <code>next_followup_date</code>, <code>last_message_summary</code>, <code>notes</code>
+                  <strong className="text-neutral-800">Optional columns:</strong> <code>business_name</code>, <code>email</code>, <code>source</code>, <code>referral_source_name</code>, <code>product_interest</code>, <code>stage</code>, <code>status</code>, <code>priority</code>, <code>assigned_to_email</code>, <code>next_followup_date</code>, <code>last_message_summary</code>, <code>notes</code>
                 </div>
                 <div className="flex items-center justify-between">
                   <DownloadTemplateButton />
@@ -309,6 +317,23 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
 
               <label className="block">
                 <span className="text-sm font-medium text-neutral-800">
+                  Priority
+                </span>
+                <select
+                  name="priority"
+                  defaultValue="Medium"
+                  className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                >
+                  {leadPriorities.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-neutral-800">
                   Assigned to
                 </span>
                 <select
@@ -394,7 +419,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         ) : null}
 
         <div className="mt-6 rounded border border-neutral-200 bg-white p-4">
-          <form className="grid gap-3 lg:grid-cols-[1fr_190px_190px_190px_auto]">
+          <form className="grid gap-3 lg:grid-cols-[1fr_190px_190px_190px_190px_auto]">
             <input
               name="q"
               defaultValue={query}
@@ -437,6 +462,18 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 </option>
               ))}
             </select>
+            <select
+              name="priority"
+              defaultValue={priority}
+              className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+            >
+              <option value="">All priorities</option>
+              {leadPriorities.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
             <SubmitButton variant="dark" pendingText="Filtering...">
               Filter
             </SubmitButton>
@@ -451,8 +488,10 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                   <th className="px-4 py-3">Lead</th>
                   <th className="px-4 py-3">Stage</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Priority</th>
                   <th className="px-4 py-3">Source</th>
                   <th className="px-4 py-3">Assigned</th>
+                  <th className="px-4 py-3">Last Contact</th>
                   <th className="px-4 py-3">Follow-up</th>
                 </tr>
               </thead>
@@ -484,11 +523,22 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                         tone={leadStatusTone(lead.status)}
                       />
                     </td>
+                    <td className="px-4 py-4">
+                      <StatusBadge
+                        label={lead.priority}
+                        tone={leadPriorityTone(lead.priority)}
+                      />
+                    </td>
                     <td className="px-4 py-4 text-neutral-700">
                       {lead.source}
                     </td>
                     <td className="px-4 py-4 text-neutral-700">
                       {staffById.get(lead.assigned_to) ?? "Unknown"}
+                    </td>
+                    <td className="px-4 py-4 text-neutral-700">
+                      {lead.last_contact_date
+                        ? formatDate(lead.last_contact_date)
+                        : "Never contacted"}
                     </td>
                     <td className="px-4 py-4 text-neutral-700">
                       <div>{formatDate(lead.next_followup_date)}</div>
@@ -502,7 +552,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 ))}
 
                 {records.length === 0 ? (
-                  <EmptyTableRow colSpan={6} message="No leads found." />
+                  <EmptyTableRow colSpan={8} message="No leads found." />
                 ) : null}
               </tbody>
             </table>

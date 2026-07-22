@@ -23,6 +23,8 @@ export type ProductEvent = {
   posted_by: string;
   resolved_at: string | null;
   resolution_time_hours: number | null;
+  slack_channel_id: string | null;
+  slack_thread_ts: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -39,10 +39,16 @@ type TicketsPageProps = {
     status?: string;
     category?: string;
     assigned_to?: string;
+    from?: string;
+    to?: string;
     error?: string;
     success?: string;
   };
 };
+
+function isValidDateInput(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
 
 function isSlaBreached(ticket: Ticket) {
   return (
@@ -86,6 +92,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const status = searchParams?.status ?? "";
   const category = searchParams?.category ?? "";
   const assignedTo = searchParams?.assigned_to ?? "";
+  const from = searchParams?.from ?? "";
+  const to = searchParams?.to ?? "";
 
   let ticketsQuery = supabase.from("tickets").select("*");
 
@@ -111,6 +119,14 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     ticketsQuery = ticketsQuery.is("assigned_to", null);
   } else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assignedTo)) {
     ticketsQuery = ticketsQuery.eq("assigned_to", assignedTo);
+  }
+
+  if (isValidDateInput(from)) {
+    ticketsQuery = ticketsQuery.gte("created_at", `${from}T00:00:00`);
+  }
+
+  if (isValidDateInput(to)) {
+    ticketsQuery = ticketsQuery.lte("created_at", `${to}T23:59:59.999`);
   }
 
   const [
@@ -212,7 +228,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         ) : null}
 
         <div className="mt-6 rounded border border-neutral-200 bg-white p-4">
-          <form className="grid gap-3 lg:grid-cols-[1fr_170px_170px_190px_210px_auto]">
+          <form className="grid gap-3 lg:grid-cols-[1fr_170px_170px_190px_210px_150px_150px_auto]">
             <input
               name="q"
               defaultValue={query}
@@ -268,6 +284,20 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
                 </option>
               ))}
             </select>
+            <input
+              type="date"
+              name="from"
+              defaultValue={from}
+              aria-label="From date"
+              className="rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+            />
+            <input
+              type="date"
+              name="to"
+              defaultValue={to}
+              aria-label="To date"
+              className="rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+            />
             <SubmitButton variant="dark" pendingText="Filtering...">
               Filter
             </SubmitButton>
@@ -284,6 +314,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
                   <th className="px-4 py-3">Priority</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Assigned</th>
+                  <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">SLA</th>
                 </tr>
               </thead>
@@ -325,6 +356,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
                         : "Unassigned"}
                     </td>
                     <td className="px-4 py-4 text-neutral-700">
+                      {formatDate(ticket.created_at)}
+                    </td>
+                    <td className="px-4 py-4 text-neutral-700">
                       <div>{formatDate(ticket.sla_deadline)}</div>
                       {isSlaBreached(ticket) ? (
                         <div className="mt-1 text-xs font-semibold text-red-700">
@@ -336,7 +370,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
                 ))}
 
                 {records.length === 0 ? (
-                  <EmptyTableRow colSpan={6} message="No tickets found." />
+                  <EmptyTableRow colSpan={7} message="No tickets found." />
                 ) : null}
               </tbody>
             </table>

@@ -65,8 +65,6 @@ export type Business = {
   last_transaction_date: string | null;
   settlement_type: SettlementType | null;
   assigned_cs_owner: string | null;
-  referral_code: string | null;
-  referred_by_business_id: string | null;
   converted_lead_id: string | null;
   transaction_limit_amount: number | null;
   current_transaction_volume: number;
@@ -80,6 +78,8 @@ export type Business = {
   risk_score: number | null;
   risk_level: string | null;
   notes: string | null;
+  slack_channel_id: string | null;
+  slack_thread_ts: string | null;
   created_at: string;
   updated_at: string;
 };

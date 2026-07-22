@@ -64,3 +64,10 @@ export function leadStageTone(stage: string): BadgeTone {
   if (stage === "Closed Lost") return "slate";
   return "neutral";
 }
+
+export function leadPriorityTone(priority: string): BadgeTone {
+  if (priority === "Critical") return "red";
+  if (priority === "High") return "amber";
+  if (priority === "Medium") return "blue";
+  return "slate";
+}

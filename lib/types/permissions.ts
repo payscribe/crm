@@ -4,7 +4,6 @@ export type CrmModule =
   | "Tickets"
   | "Partners"
   | "Product Log"
-  | "Referrals"
   | "Reports"
   | "Settings";
 
@@ -49,7 +48,6 @@ export const crmModules: CrmModule[] = [
   "Tickets",
   "Partners",
   "Product Log",
-  "Referrals",
   "Reports",
   "Settings"
 ];

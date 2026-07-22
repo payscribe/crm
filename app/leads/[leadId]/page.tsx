@@ -1,17 +1,22 @@
 import { AppShell } from "@/components/app-shell";
+import { ActivityTimeline } from "@/components/activity/activity-timeline";
+import { AddTaskButton } from "@/components/tasks/add-task-button";
 import { LeadDangerActions } from "@/components/leads/lead-danger-actions";
 import { LeadStageStatusForm } from "@/components/leads/lead-stage-status-form";
 import { StatusAlert } from "@/components/ui/status-alert";
 import {
+  leadPriorityTone,
   leadStageTone,
   leadStatusTone,
   StatusBadge
 } from "@/components/ui/status-badge";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
+import { fetchActivityFeed } from "@/lib/activity/feed";
 import {
   leadCommunicationChannels,
   leadCommunicationDirections,
+  leadPriorities,
   leadSources,
   leadStages,
   leadStatuses
@@ -20,7 +25,7 @@ import { formatDate } from "@/lib/format/date";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getHistoricalAwareLeadProductOptions } from "@/lib/settings/managed-options";
 import type { Business } from "@/lib/types/businesses";
-import type { Lead, LeadCommunicationLog } from "@/lib/types/leads";
+import type { Lead } from "@/lib/types/leads";
 import type { StaffUser } from "@/lib/types/users";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -74,7 +79,6 @@ export default async function LeadDetailPage({
   const [
     { data: lead },
     { data: staffMembers },
-    { data: communicationLogs },
     { data: businesses },
     productInterestOptionState
   ] =
@@ -90,12 +94,6 @@ export default async function LeadDetailPage({
         .eq("status", "Active")
         .order("full_name", { ascending: true })
         .returns<StaffUser[]>(),
-      supabase
-        .from("lead_communication_log")
-        .select("*")
-        .eq("lead_id", params.leadId)
-        .order("date", { ascending: false })
-        .returns<LeadCommunicationLog[]>(),
       canViewBusiness
         ? supabase
             .from("businesses")
@@ -126,6 +124,7 @@ export default async function LeadDetailPage({
       staffMember.full_name
     ])
   );
+  const activityEntries = await fetchActivityFeed(supabase, "Lead", lead.lead_id);
   const disabled = !canEdit;
   const linkedBusiness = (businesses ?? []).find(
     (business) => business.business_id === lead.linked_business_id
@@ -151,18 +150,25 @@ export default async function LeadDetailPage({
               {staffById.get(lead.assigned_to) ?? "Unknown"}
             </p>
           </div>
-          <Link
-            href="/leads"
-            className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue"
-          >
-            Back to Leads
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <AddTaskButton
+              entityType="Lead"
+              entityId={lead.lead_id}
+              returnTo={`/leads/${lead.lead_id}`}
+            />
+            <Link
+              href="/leads"
+              className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue"
+            >
+              Back to Leads
+            </Link>
+          </div>
         </div>
 
         <StatusAlert type="error" message={searchParams?.error} />
         <StatusAlert type="success" message={searchParams?.success} />
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Stage</p>
             <div className="mt-3">
@@ -177,6 +183,25 @@ export default async function LeadDetailPage({
                 tone={leadStatusTone(lead.status)}
               />
             </div>
+          </div>
+          <div className="rounded border border-neutral-200 bg-white p-5">
+            <p className="text-sm font-medium text-neutral-500">Priority</p>
+            <div className="mt-3">
+              <StatusBadge
+                label={lead.priority}
+                tone={leadPriorityTone(lead.priority)}
+              />
+            </div>
+          </div>
+          <div className="rounded border border-neutral-200 bg-white p-5">
+            <p className="text-sm font-medium text-neutral-500">
+              Last contact
+            </p>
+            <p className="mt-2 text-xl font-semibold text-neutral-950">
+              {lead.last_contact_date
+                ? formatDate(lead.last_contact_date)
+                : "Never contacted"}
+            </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">
@@ -355,6 +380,24 @@ export default async function LeadDetailPage({
                 {leadStatuses.map((status) => (
                   <option key={status} value={status}>
                     {status}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-neutral-800">
+                Priority
+              </span>
+              <select
+                disabled={disabled}
+                name="priority"
+                defaultValue={lead.priority}
+                className={selectClass}
+              >
+                {leadPriorities.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priority}
                   </option>
                 ))}
               </select>
@@ -577,58 +620,13 @@ export default async function LeadDetailPage({
           </form>
         ) : null}
 
-        <div className="mt-6 overflow-hidden rounded border border-neutral-200 bg-white">
-          <div className="border-b border-neutral-200 px-4 py-3">
-            <h3 className="text-base font-semibold text-neutral-950">
-              Communication Log
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-neutral-200 text-sm">
-              <thead className="bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                <tr>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Channel</th>
-                  <th className="px-4 py-3">Direction</th>
-                  <th className="px-4 py-3">Summary</th>
-                  <th className="px-4 py-3">Logged By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-200">
-                {(communicationLogs ?? []).map((log) => (
-                  <tr key={log.log_id}>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {formatDate(log.date)}
-                    </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {log.channel}
-                    </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {log.direction}
-                    </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {log.summary}
-                    </td>
-                    <td className="px-4 py-4 text-neutral-700">
-                      {staffById.get(log.logged_by) ?? "Unknown"}
-                    </td>
-                  </tr>
-                ))}
-
-                {(communicationLogs ?? []).length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-4 py-8 text-center text-sm text-neutral-500"
-                    >
-                      No communication has been logged yet.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ActivityTimeline
+          entityType="Lead"
+          entityId={lead.lead_id}
+          entries={activityEntries}
+          actorNames={staffById}
+          canCreate={canCreate}
+        />
 
         <div className="mt-6 rounded border border-neutral-200 bg-white p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

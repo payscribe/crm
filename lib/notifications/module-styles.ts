@@ -7,7 +7,7 @@ export type CrmNotificationModule =
   | "Product Log"
   | "Reports"
   | "Settings"
-  | "Referrals";
+  | "Tasks";
 
 type ModuleStyle = {
   color: string;
@@ -67,10 +67,10 @@ const moduleStyles: Record<CrmNotificationModule, ModuleStyle> = {
     emoji: "⚙️",
     label: "SETTINGS"
   },
-  Referrals: {
-    color: "#CA8A04",
-    emoji: "🔁",
-    label: "REFERRAL"
+  Tasks: {
+    color: "#0EA5E9",
+    emoji: "✅",
+    label: "TASK"
   }
 };
 
