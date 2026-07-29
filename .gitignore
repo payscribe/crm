@@ -16,3 +16,7 @@ vercel
 .vercel
 .npm-cache
 .tmp
+
+# Local data exports (spreadsheets/CSVs dropped in the repo root)
+*.xlsx
+*.csv

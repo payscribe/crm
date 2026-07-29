@@ -416,6 +416,13 @@ function shouldIgnoreEmail(
   // Internal payscribe staff emails
   if (from.endsWith("@payscribe.co")) return true;
 
+  // Explicitly ignored email addresses
+  const ignoredEmails = [
+    "gemini-notes@google.com",
+    "support@npmjs.com"
+  ];
+  if (ignoredEmails.includes(from)) return true;
+
   // Known social / notification domains
   const notificationDomains = [
     "facebookmail.com",

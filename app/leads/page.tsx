@@ -102,6 +102,23 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   ]);
 
   const records = leads ?? [];
+  const leadIds = records.map((lead) => lead.lead_id);
+
+  const { data: commLogs } = leadIds.length > 0
+    ? await supabase
+        .from("lead_communication_log")
+        .select("lead_id")
+        .in("lead_id", leadIds)
+    : { data: null };
+
+  const followUpCountsByLeadId = new Map<string, number>();
+  for (const log of commLogs ?? []) {
+    followUpCountsByLeadId.set(
+      log.lead_id,
+      (followUpCountsByLeadId.get(log.lead_id) ?? 0) + 1
+    );
+  }
+
   const staffById = new Map(
     (staffMembers ?? []).map((staffMember) => [
       staffMember.user_id,
@@ -491,8 +508,9 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                   <th className="px-4 py-3">Priority</th>
                   <th className="px-4 py-3">Source</th>
                   <th className="px-4 py-3">Assigned</th>
+                  <th className="px-4 py-3 text-center">Follow-ups Done</th>
                   <th className="px-4 py-3">Last Contact</th>
-                  <th className="px-4 py-3">Follow-up</th>
+                  <th className="px-4 py-3">Next Follow-up</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
@@ -535,6 +553,17 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                     <td className="px-4 py-4 text-neutral-700">
                       {staffById.get(lead.assigned_to) ?? "Unknown"}
                     </td>
+                    <td className="px-4 py-4 text-center text-neutral-700">
+                      <span
+                        className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          (followUpCountsByLeadId.get(lead.lead_id) ?? 0) > 0
+                            ? "bg-payscribe-blue/10 text-payscribe-blue"
+                            : "bg-neutral-100 text-neutral-500"
+                        }`}
+                      >
+                        {followUpCountsByLeadId.get(lead.lead_id) ?? 0}
+                      </span>
+                    </td>
                     <td className="px-4 py-4 text-neutral-700">
                       {lead.last_contact_date
                         ? formatDate(lead.last_contact_date)
@@ -552,7 +581,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 ))}
 
                 {records.length === 0 ? (
-                  <EmptyTableRow colSpan={8} message="No leads found." />
+                  <EmptyTableRow colSpan={9} message="No leads found." />
                 ) : null}
               </tbody>
             </table>

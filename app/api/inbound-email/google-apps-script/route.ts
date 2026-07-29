@@ -44,6 +44,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // Ignore specific email addresses
+  const ignoredEmails = [
+    "gemini-notes@google.com",
+    "support@npmjs.com"
+  ];
+  if (ignoredEmails.includes(sender.email.toLowerCase())) {
+    return NextResponse.json({
+      ignored: true,
+      reason: "Sender email is on the ignore list"
+    });
+  }
+
   const supabase = createSupabaseAdminClient();
 
   const { data: existingTicket } = await supabase
