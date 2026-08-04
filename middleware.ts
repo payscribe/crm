@@ -8,6 +8,12 @@ export async function middleware(request: NextRequest) {
     }
   });
 
+  // Widget APIs are intentionally public. Do not make their availability
+  // depend on an unrelated Supabase session lookup.
+  if (request.nextUrl.pathname.startsWith("/api/v1/support/")) {
+    return response;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -47,5 +53,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
+  matcher: [
+    "/((?!api/v1/support(?:/|$)|support-widget(?:-test)?\\.html$|support-widget\\.js$|payscribe-logo\\.png$|_next/static|_next/image|favicon.ico).*)"
+  ]
 };

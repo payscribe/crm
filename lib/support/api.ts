@@ -2,28 +2,41 @@ import { NextResponse } from "next/server";
 
 const defaultAllowedHeaders = "Content-Type, Authorization";
 const defaultAllowedMethods = "GET, POST, OPTIONS";
+const defaultAllowedOrigins = [
+  "https://payscribe.co",
+  "https://www.payscribe.co",
+  "https://app.payscribe.ng"
+];
 
 function allowedOrigins() {
-  return [
+  return new Set([
+    ...defaultAllowedOrigins,
     process.env.NEXT_PUBLIC_APP_URL,
     ...(process.env.SUPPORT_WIDGET_ALLOWED_ORIGINS ?? "")
       .split(",")
       .map((origin) => origin.trim())
-  ].filter(Boolean);
+  ].filter(Boolean));
+}
+
+function isLocalDevelopmentOrigin(origin: string | null) {
+  return Boolean(
+    origin &&
+      process.env.NODE_ENV !== "production" &&
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+  );
 }
 
 export function corsHeaders(request: Request) {
   const requestOrigin = request.headers.get("origin");
   const configuredOrigins = allowedOrigins();
   const allowOrigin =
-    requestOrigin && configuredOrigins.includes(requestOrigin)
+    requestOrigin &&
+    (configuredOrigins.has(requestOrigin) || isLocalDevelopmentOrigin(requestOrigin))
       ? requestOrigin
-      : configuredOrigins.length === 0
-        ? "*"
-        : configuredOrigins[0] ?? "*";
+      : null;
 
   return {
-    "Access-Control-Allow-Origin": allowOrigin,
+    ...(allowOrigin ? { "Access-Control-Allow-Origin": allowOrigin } : {}),
     "Access-Control-Allow-Methods": defaultAllowedMethods,
     "Access-Control-Allow-Headers": defaultAllowedHeaders,
     "Access-Control-Max-Age": "86400",

@@ -42,21 +42,56 @@
 	}
 
 	function request(path, options) {
-		return fetch(apiBase.replace(/\/$/, "") + path, {
-			method: (options && options.method) || "GET",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: options && options.body ? JSON.stringify(options.body) : undefined,
-		}).then(function (response) {
-			return response.json().then(function (body) {
-				if (!response.ok) {
-					var message = body && body.error ? body.error : "Request failed";
-					throw new Error(message);
-				}
-				return body;
-			});
-		});
+		var method = (options && options.method) || "GET";
+		var hasBody = Boolean(options && options.body);
+		var maxAttempts = method === "GET" ? 2 : 1;
+
+		function attempt(attemptNumber) {
+			var controller = typeof AbortController !== "undefined"
+				? new AbortController()
+				: null;
+			var timeout = controller
+				? window.setTimeout(function () {
+					controller.abort();
+				}, 10000)
+				: null;
+
+			return fetch(apiBase.replace(/\/$/, "") + path, {
+				method: method,
+				headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+				body: hasBody ? JSON.stringify(options.body) : undefined,
+				signal: controller ? controller.signal : undefined,
+			})
+				.then(function (response) {
+					return response.json().then(function (body) {
+						if (!response.ok) {
+							var message = body && body.error ? body.error : "Request failed";
+							var error = new Error(message);
+							error.status = response.status;
+							throw error;
+						}
+						return body;
+					});
+				})
+				.catch(function (error) {
+					var retryable = !error.status || error.status === 429 || error.status >= 500;
+					if (retryable && attemptNumber < maxAttempts) {
+						return new Promise(function (resolve) {
+							window.setTimeout(resolve, 500);
+						}).then(function () {
+							return attempt(attemptNumber + 1);
+						});
+					}
+					throw error;
+				})
+				.finally(function () {
+					if (timeout !== null) {
+						window.clearTimeout(timeout);
+					}
+				});
+		}
+
+		return attempt(1);
 	}
 
 	function buildApiUrl(path) {
@@ -712,7 +747,10 @@
 				logSession("opened");
 				renderIntro();
 			})
-			.catch(function () {
+			.catch(function (error) {
+				if (window.console && typeof window.console.error === "function") {
+					window.console.error("Payscribe support failed to load", error);
+				}
 				clearBody();
 				showError(
 					"Support is temporarily unavailable. Please try again shortly.",

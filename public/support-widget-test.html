@@ -118,8 +118,9 @@
         </form>
 
         <p class="hint">
-          Local URL: <code>http://localhost:3000/support-widget-test.html</code>.
-          The widget script loaded by this page is <code>/support-widget.js</code>.
+          When using Live Server, keep the CRM app running on
+          <code>http://localhost:3000</code>. The widget script is loaded relative
+          to this HTML file.
         </p>
       </section>
     </main>
@@ -129,7 +130,14 @@
       var merchantInput = document.getElementById("merchant-id");
       var form = document.getElementById("widget-config-form");
 
-      apiBaseInput.value = window.location.origin;
+      var isLiveServer =
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1") &&
+        window.location.port !== "3000";
+
+      apiBaseInput.value = isLiveServer
+        ? "http://localhost:3000"
+        : window.location.origin;
 
       function loadWidget() {
         var existingScript = document.getElementById("payscribe-widget-script");
@@ -147,7 +155,8 @@
 
         var script = document.createElement("script");
         script.id = "payscribe-widget-script";
-        script.src = "/support-widget.js?test=" + Date.now();
+        script.src = new URL("./support-widget.js", window.location.href).href +
+          "?test=" + Date.now();
         script.onload = function () {
           if (window.PayscribeSupportWidget) {
             window.PayscribeSupportWidget.open();
