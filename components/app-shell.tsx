@@ -27,6 +27,9 @@ export function AppShell({
     if (item.module === "Dashboard") {
       return true;
     }
+    if (item.module === "Issues") {
+      return true;
+    }
 
     if (currentUser.is_super_admin) {
       return true;

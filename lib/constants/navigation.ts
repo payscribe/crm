@@ -3,7 +3,7 @@ import type { CrmModule } from "@/lib/types/permissions";
 export type NavigationItem = {
   label: string;
   href: string;
-  module: CrmModule | "Dashboard";
+  module: CrmModule | "Dashboard" | "Issues";
 };
 
 export const navigationItems: NavigationItem[] = [
@@ -14,6 +14,7 @@ export const navigationItems: NavigationItem[] = [
   { label: "Tickets", href: "/tickets", module: "Tickets" },
   { label: "Partners", href: "/partners", module: "Partners" },
   { label: "Product Log", href: "/product-log", module: "Product Log" },
+  { label: "Issues", href: "/issues", module: "Issues" },
   { label: "Reports", href: "/reports", module: "Reports" },
   { label: "Settings", href: "/settings", module: "Settings" }
 ];

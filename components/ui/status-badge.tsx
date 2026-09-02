@@ -71,3 +71,9 @@ export function leadPriorityTone(priority: string): BadgeTone {
   if (priority === "Medium") return "blue";
   return "slate";
 }
+
+export function issueStatusTone(status: string): BadgeTone {
+  if (status === "Closed") return "green";
+  if (status === "In Progress") return "amber";
+  return "blue";
+}

@@ -6,11 +6,17 @@ import { CloseTicketForm } from "@/components/tickets/close-ticket-form";
 import { StatusAlert } from "@/components/ui/status-alert";
 import {
   StatusBadge,
+  issueStatusTone,
   ticketPriorityTone,
   ticketStatusLabel,
   ticketStatusTone
 } from "@/components/ui/status-badge";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { NewIssueForm } from "@/components/issues/new-issue-form";
+import { FormModal } from "@/components/ui/form-modal";
+import { createIssue } from "@/app/issues/actions";
+import { issueCategories, issuePriorities } from "@/lib/constants/issues";
+import type { Issue } from "@/lib/types/issues";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { fetchActivityFeed } from "@/lib/activity/feed";
 import type { Business } from "@/lib/types/businesses";
@@ -106,6 +112,28 @@ export default async function TicketDetailPage({
   if (!ticket) {
     notFound();
   }
+  const raiseCategory =
+    ticket.sub_category && issueCategories.includes(ticket.sub_category as never)
+      ? ticket.sub_category
+      : "";
+  const keyword = ticket.subject
+    ? ticket.subject.split(/\s+/).filter(Boolean).slice(0, 3).join(" ")
+    : "";
+
+  let suggestQuery = supabase
+    .from("issues")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(6);
+  if (raiseCategory) {
+    suggestQuery = suggestQuery.eq("category", raiseCategory);
+  } else if (!keyword) {
+    suggestQuery = suggestQuery.eq("category", "__no_match__");
+  } else {
+    suggestQuery = suggestQuery.ilike("title", `%${keyword}%`);
+  }
+
+  const { data: suggestions } = await suggestQuery.returns<Issue[]>();
 
   const businessById = new Map(
     (businesses ?? []).map((business) => [
@@ -158,6 +186,63 @@ export default async function TicketDetailPage({
               entityId={ticket.ticket_id}
               returnTo={`/tickets/${ticket.ticket_id}`}
             />
+            <FormModal
+              buttonLabel="Raise Issue"
+              title="Raise Issue"
+              description="Capture this ticket as a knowledge base entry so the same issue can be referenced if it comes up again."
+              size="wide"
+            >
+              {suggestions && suggestions.length > 0 ? (
+                <div className="mb-5 overflow-hidden rounded border border-neutral-200">
+                  <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-800">
+                    Similar issues already in the knowledge base
+                  </div>
+                  <ul className="divide-y divide-neutral-200">
+                    {suggestions.map((similar) => (
+                      <li key={similar.issue_id} className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <Link
+                            href={`/issues/${similar.issue_id}`}
+                            className="font-semibold text-payscribe-blue hover:underline"
+                          >
+                            {similar.title}
+                          </Link>
+                          <StatusBadge
+                            label={similar.status}
+                            tone={issueStatusTone(similar.status)}
+                          />
+                        </div>
+                        {similar.closing_notes ? (
+                          <p className="mt-1 text-sm text-neutral-600">
+                            {similar.closing_notes}
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs text-neutral-500">
+                            Not yet resolved.
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <NewIssueForm
+                action={createIssue}
+                staffMembers={staffMembers ?? []}
+                categories={issueCategories}
+                priorities={issuePriorities}
+                statuses={["Open", "In Progress"]}
+                defaults={{
+                  title: ticket.subject,
+                  category: raiseCategory,
+                  description: ticket.issue_description,
+                  priority: ticket.priority,
+                  assignedTo: ticket.assigned_to ?? undefined,
+                  status: "Open"
+                }}
+                linkedTicketId={ticket.ticket_id}
+              />
+            </FormModal>
             <Link
               href="/tickets"
               className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue"
