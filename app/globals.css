@@ -30,6 +30,45 @@ textarea {
   font: inherit;
 }
 
+.ticket-rich-text-editor:empty::before {
+  color: #a3a3a3;
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.ticket-rich-text-editor h2,
+.ticket-rich-text h2 {
+  margin: 1rem 0 0.35rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.ticket-rich-text-editor h3,
+.ticket-rich-text h3 {
+  margin: 0.85rem 0 0.3rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ticket-rich-text-editor p,
+.ticket-rich-text p {
+  margin: 0.4rem 0;
+}
+
+.ticket-rich-text-editor ul,
+.ticket-rich-text ul {
+  margin: 0.5rem 0;
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+
+.ticket-rich-text-editor ol,
+.ticket-rich-text ol {
+  margin: 0.5rem 0;
+  list-style: decimal;
+  padding-left: 1.5rem;
+}
+
 @keyframes payscribe-progress {
   0% {
     transform: translateX(-120%);

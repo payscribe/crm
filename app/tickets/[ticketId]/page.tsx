@@ -3,20 +3,18 @@ import { ActivityTimeline } from "@/components/activity/activity-timeline";
 import { AddTaskButton } from "@/components/tasks/add-task-button";
 import { AddTicketNoteForm } from "@/components/tickets/add-ticket-note-form";
 import { CloseTicketForm } from "@/components/tickets/close-ticket-form";
+import { RichTextContent } from "@/components/tickets/rich-text-content";
+import { TicketDocumentationForm } from "@/components/tickets/ticket-documentation-form";
 import { StatusAlert } from "@/components/ui/status-alert";
 import {
   StatusBadge,
-  issueStatusTone,
   ticketPriorityTone,
   ticketStatusLabel,
   ticketStatusTone
 } from "@/components/ui/status-badge";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { NewIssueForm } from "@/components/issues/new-issue-form";
 import { FormModal } from "@/components/ui/form-modal";
-import { createIssue } from "@/app/issues/actions";
-import { issueCategories, issuePriorities } from "@/lib/constants/issues";
-import type { Issue } from "@/lib/types/issues";
+import { saveTicketDocumentation } from "@/app/ticket-documentation/actions";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { fetchActivityFeed } from "@/lib/activity/feed";
 import type { Business } from "@/lib/types/businesses";
@@ -32,6 +30,7 @@ import { formatDate } from "@/lib/format/date";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getHistoricalAwareTicketSubCategoryOptionsByCategory } from "@/lib/settings/managed-options";
 import type { Ticket } from "@/lib/types/tickets";
+import type { TicketDocumentation } from "@/lib/types/ticket-documentation";
 import type { StaffUser } from "@/lib/types/users";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -76,7 +75,8 @@ export default async function TicketDetailPage({
     { data: ticket },
     { data: businesses },
     { data: staffMembers },
-    subCategoryOptionState
+    subCategoryOptionState,
+    { data: documentation }
   ] =
     await Promise.all([
       supabase
@@ -106,35 +106,17 @@ export default async function TicketDetailPage({
             data?.issue_category ?? "Complaint",
             data?.sub_category ?? null
           )
-        )
+        ),
+      supabase
+        .from("ticket_documentation")
+        .select("*")
+        .eq("ticket_id", params.ticketId)
+        .maybeSingle<TicketDocumentation>()
     ]);
 
   if (!ticket) {
     notFound();
   }
-  const raiseCategory =
-    ticket.sub_category && issueCategories.includes(ticket.sub_category as never)
-      ? ticket.sub_category
-      : "";
-  const keyword = ticket.subject
-    ? ticket.subject.split(/\s+/).filter(Boolean).slice(0, 3).join(" ")
-    : "";
-
-  let suggestQuery = supabase
-    .from("issues")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(6);
-  if (raiseCategory) {
-    suggestQuery = suggestQuery.eq("category", raiseCategory);
-  } else if (!keyword) {
-    suggestQuery = suggestQuery.eq("category", "__no_match__");
-  } else {
-    suggestQuery = suggestQuery.ilike("title", `%${keyword}%`);
-  }
-
-  const { data: suggestions } = await suggestQuery.returns<Issue[]>();
-
   const businessById = new Map(
     (businesses ?? []).map((business) => [
       business.business_id,
@@ -186,63 +168,21 @@ export default async function TicketDetailPage({
               entityId={ticket.ticket_id}
               returnTo={`/tickets/${ticket.ticket_id}`}
             />
-            <FormModal
-              buttonLabel="Raise Issue"
-              title="Raise Issue"
-              description="Capture this ticket as a knowledge base entry so the same issue can be referenced if it comes up again."
-              size="wide"
-            >
-              {suggestions && suggestions.length > 0 ? (
-                <div className="mb-5 overflow-hidden rounded border border-neutral-200">
-                  <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-800">
-                    Similar issues already in the knowledge base
-                  </div>
-                  <ul className="divide-y divide-neutral-200">
-                    {suggestions.map((similar) => (
-                      <li key={similar.issue_id} className="px-4 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <Link
-                            href={`/issues/${similar.issue_id}`}
-                            className="font-semibold text-payscribe-blue hover:underline"
-                          >
-                            {similar.title}
-                          </Link>
-                          <StatusBadge
-                            label={similar.status}
-                            tone={issueStatusTone(similar.status)}
-                          />
-                        </div>
-                        {similar.closing_notes ? (
-                          <p className="mt-1 text-sm text-neutral-600">
-                            {similar.closing_notes}
-                          </p>
-                        ) : (
-                          <p className="mt-1 text-xs text-neutral-500">
-                            Not yet resolved.
-                          </p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              <NewIssueForm
-                action={createIssue}
-                staffMembers={staffMembers ?? []}
-                categories={issueCategories}
-                priorities={issuePriorities}
-                statuses={["Open", "In Progress"]}
-                defaults={{
-                  title: ticket.subject,
-                  category: raiseCategory,
-                  description: ticket.issue_description,
-                  priority: ticket.priority,
-                  assignedTo: ticket.assigned_to ?? undefined,
-                  status: "Open"
-                }}
-                linkedTicketId={ticket.ticket_id}
-              />
-            </FormModal>
+            {canEdit ? (
+              <FormModal
+                buttonLabel={documentation ? "Update Documentation" : "Add Documentation"}
+                title={documentation ? "Update Ticket Documentation" : "Add Ticket Documentation"}
+                description="Document the investigation, root cause, and steps used to resolve this ticket."
+                size="wide"
+              >
+                <TicketDocumentationForm
+                  action={saveTicketDocumentation}
+                  ticketId={ticket.ticket_id}
+                  initialTitle={documentation?.title ?? ticket.subject}
+                  initialContent={documentation?.content_html}
+                />
+              </FormModal>
+            ) : null}
             <Link
               href="/tickets"
               className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-payscribe-blue hover:text-payscribe-blue"
@@ -620,6 +560,21 @@ export default async function TicketDetailPage({
             <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-700">
               {ticket.resolution_notes ?? "No resolution recorded."}
             </p>
+          </div>
+        ) : null}
+
+        {documentation ? (
+          <div className="mt-6 rounded border border-neutral-200 bg-white p-5">
+            <div className="flex flex-col gap-2 border-b border-neutral-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-payscribe-blue">Ticket Documentation</p>
+                <h3 className="mt-1 text-base font-semibold text-neutral-950">{documentation.title}</h3>
+              </div>
+              <Link href="/ticket-documentation" className="text-sm font-semibold text-payscribe-blue hover:underline">
+                View all documentation
+              </Link>
+            </div>
+            <RichTextContent html={documentation.content_html} className="mt-4" />
           </div>
         ) : null}
 
