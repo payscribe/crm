@@ -129,6 +129,37 @@ Payscribe Support`;
   };
 }
 
+export function ticketReplyEmail({
+  agentName,
+  customerName,
+  message,
+  subject,
+  ticketId
+}: {
+  agentName: string;
+  customerName: string | null;
+  message: string;
+  subject: string;
+  ticketId: string;
+}) {
+  const greeting = customerName ? `Hello ${customerName},` : "Hello,";
+  const htmlGreeting = customerName
+    ? `Hello ${escapeHtml(customerName)},`
+    : "Hello,";
+
+  return {
+    subject: `Re: [${ticketId}] ${subject}`,
+    textContent: `${greeting}\n\n${agentName} from Payscribe Support replied to your ticket:\n\n${message}\n\nYou can continue the conversation through the same support channel.\n\nBest regards,\nPayscribe Support`,
+    htmlContent: `
+      <p>${htmlGreeting}</p>
+      <p><strong>${escapeHtml(agentName)}</strong> from Payscribe Support replied to ticket <strong>${escapeHtml(ticketId)}</strong>:</p>
+      <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #0f766e;background:#f8fafc;white-space:pre-wrap">${escapeHtml(message)}</blockquote>
+      <p>You can continue the conversation through the same support channel.</p>
+      <p>Best regards,<br/>Payscribe Support</p>
+    `
+  };
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")

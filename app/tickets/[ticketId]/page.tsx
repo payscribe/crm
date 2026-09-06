@@ -1,10 +1,10 @@
 import { AppShell } from "@/components/app-shell";
 import { ActivityTimeline } from "@/components/activity/activity-timeline";
 import { AddTaskButton } from "@/components/tasks/add-task-button";
-import { AddTicketNoteForm } from "@/components/tickets/add-ticket-note-form";
 import { CloseTicketForm } from "@/components/tickets/close-ticket-form";
 import { RichTextContent } from "@/components/tickets/rich-text-content";
 import { TicketDocumentationForm } from "@/components/tickets/ticket-documentation-form";
+import { TicketConversation } from "@/components/tickets/ticket-conversation";
 import { StatusAlert } from "@/components/ui/status-alert";
 import {
   StatusBadge,
@@ -76,7 +76,8 @@ export default async function TicketDetailPage({
     { data: businesses },
     { data: staffMembers },
     subCategoryOptionState,
-    { data: documentation }
+    { data: documentation },
+    { data: conversation }
   ] =
     await Promise.all([
       supabase
@@ -111,7 +112,13 @@ export default async function TicketDetailPage({
         .from("ticket_documentation")
         .select("*")
         .eq("ticket_id", params.ticketId)
-        .maybeSingle<TicketDocumentation>()
+        .maybeSingle<TicketDocumentation>(),
+      supabase
+        .from("ticket_notes")
+        .select("*")
+        .eq("ticket_id", params.ticketId)
+        .order("created_at", { ascending: true })
+        .returns<import("@/lib/types/tickets").TicketNote[]>()
     ]);
 
   if (!ticket) {
@@ -595,26 +602,13 @@ export default async function TicketDetailPage({
           </div>
         ) : null}
 
-        <div className="mt-6 rounded border border-neutral-200 bg-white p-5">
-          <div className="flex flex-col gap-2 border-b border-neutral-200 pb-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-neutral-950">
-                Note Trail
-              </h3>
-              <p className="mt-1 text-sm text-neutral-600">
-                Internal updates added while the ticket is active.
-              </p>
-            </div>
-          </div>
-
-          {canEdit && ticket.status !== "Closed" ? (
-            <AddTicketNoteForm
-              action={addTicketNote}
-              staffMembers={staffMembers ?? []}
-              ticketId={ticket.ticket_id}
-            />
-          ) : null}
-        </div>
+        <TicketConversation
+          action={addTicketNote}
+          canReply={canEdit && ticket.status !== "Closed"}
+          initialMessages={conversation ?? []}
+          staffMembers={staffMembers ?? []}
+          ticketId={ticket.ticket_id}
+        />
 
         <ActivityTimeline
           entityType="Ticket"

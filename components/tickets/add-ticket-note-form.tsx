@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { SubmitButton } from "@/components/ui/submit-button";
 import type { StaffUser } from "@/lib/types/users";
 
@@ -44,6 +44,8 @@ export function AddTicketNoteForm({
   const [noteBody, setNoteBody] = useState("");
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+  const [attachmentName, setAttachmentName] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
   const mention = activeMentionQuery(noteBody);
 
   const suggestions = useMemo(() => {
@@ -87,15 +89,25 @@ export function AddTicketNoteForm({
         : [...current, staffMember.user_id]
     );
     setActiveSuggestionIndex(0);
+    setAttachmentName("");
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   function removeMention(userId: string) {
     setMentionedUserIds((current) => current.filter((id) => id !== userId));
   }
 
+  async function sendReply(formData: FormData) {
+    await action(formData);
+    setNoteBody("");
+    setMentionedUserIds([]);
+    setActiveSuggestionIndex(0);
+  }
+
   return (
-    <form action={action} className="mt-5">
+    <form action={sendReply} className="mt-5">
       <input type="hidden" name="ticket_id" value={ticketId} />
+      <input type="hidden" name="realtime_chat" value="yes" />
       {mentionedUserIds.map((userId) => (
         <input
           key={userId}
@@ -106,12 +118,12 @@ export function AddTicketNoteForm({
       ))}
 
       <label className="block">
-        <span className="text-sm font-medium text-neutral-800">Add note</span>
+        <span className="text-sm font-medium text-neutral-800">Reply</span>
         <textarea
-          required
           name="note_body"
           rows={3}
           value={noteBody}
+          placeholder="Write a reply to the customer..."
           onChange={(event) => {
             setNoteBody(event.target.value);
             setActiveSuggestionIndex(0);
@@ -147,6 +159,29 @@ export function AddTicketNoteForm({
           className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
         />
       </label>
+
+      <div className="mt-3">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 transition hover:border-payscribe-blue hover:text-payscribe-blue">
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round">
+            <path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l10-10a4 4 0 0 1 5.7 5.7l-10 10a2 2 0 1 1-2.8-2.8l9.3-9.3" />
+          </svg>
+          {attachmentName || "Add attachment"}
+          <input
+            ref={fileRef}
+            className="sr-only"
+            type="file"
+            name="attachment"
+            accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,.doc,.docx"
+            onChange={(event) => setAttachmentName(event.target.files?.[0]?.name ?? "")}
+          />
+        </label>
+        {attachmentName ? (
+          <button type="button" className="ml-2 text-xs font-semibold text-red-600" onClick={() => {
+            setAttachmentName("");
+            if (fileRef.current) fileRef.current.value = "";
+          }}>Remove</button>
+        ) : null}
+      </div>
 
       {suggestions.length > 0 ? (
         <div className="mt-2 overflow-hidden rounded border border-neutral-200 bg-white shadow-sm">
@@ -192,11 +227,11 @@ export function AddTicketNoteForm({
       ) : null}
 
       <span className="mt-2 block text-xs text-neutral-500">
-        Type @ and select a teammate to send them a Slack DM.
+        This reply will be visible in the customer&apos;s support widget. Attach one file up to 5 MB. Type @ to notify a teammate.
       </span>
 
       <div className="mt-3 flex justify-end">
-        <SubmitButton pendingText="Adding note...">Add Note</SubmitButton>
+        <SubmitButton pendingText="Sending reply...">Send Reply</SubmitButton>
       </div>
     </form>
   );

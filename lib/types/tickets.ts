@@ -101,6 +101,10 @@ export type TicketNote = {
   note_id: string;
   ticket_id: string;
   note_body: string;
-  created_by: string;
+  created_by: string | null;
+  sender_type: "agent" | "customer" | "system";
+  sender_name: string | null;
+  client_message_id: string | null;
+  attachments: import("@/lib/support/ticket-attachments").TicketAttachment[];
   created_at: string;
 };

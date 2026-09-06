@@ -1,4 +1,9 @@
-import { ticketClosedEmail, ticketCreatedEmail, sendTransactionalEmail } from "@/lib/email/postmark";
+import {
+  ticketClosedEmail,
+  ticketCreatedEmail,
+  ticketReplyEmail,
+  sendTransactionalEmail
+} from "@/lib/email/postmark";
 import type { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type SupabaseAdmin = ReturnType<typeof createSupabaseAdminClient>;
@@ -17,6 +22,13 @@ type QueueTicketOpenedEmailInput = QueueTicketEmailInput & {
 
 type QueueTicketClosedEmailInput = QueueTicketEmailInput & {
   resolution: string;
+};
+
+type QueueTicketReplyEmailInput = QueueTicketEmailInput & {
+  agentName: string;
+  message: string;
+  noteId: string;
+  subject: string;
 };
 
 export async function queueTicketOpenedEmail({
@@ -79,6 +91,43 @@ export async function queueTicketClosedEmail({
   });
 }
 
+export async function queueTicketReplyEmail({
+  agentName,
+  customerEmail,
+  customerName,
+  gmailThreadId,
+  message,
+  noteId,
+  subject,
+  supabase,
+  ticketId
+}: QueueTicketReplyEmailInput) {
+  if (!customerEmail) {
+    return false;
+  }
+
+  const email = ticketReplyEmail({
+    agentName,
+    customerName,
+    message,
+    subject,
+    ticketId
+  });
+
+  return queueTicketEmail({
+    bodyText: email.textContent,
+    bodyHtml: email.htmlContent,
+    customerEmail,
+    customerName,
+    gmailThreadId,
+    notificationType: "Ticket Reply",
+    sourceId: noteId,
+    subject: email.subject,
+    supabase,
+    ticketId
+  });
+}
+
 async function queueTicketEmail({
   bodyText,
   bodyHtml,
@@ -86,6 +135,7 @@ async function queueTicketEmail({
   customerName,
   gmailThreadId,
   notificationType,
+  sourceId = null,
   subject,
   supabase,
   ticketId
@@ -95,7 +145,8 @@ async function queueTicketEmail({
   customerEmail: string;
   customerName: string | null;
   gmailThreadId: string | null;
-  notificationType: "Ticket Opened" | "Ticket Closed";
+  notificationType: "Ticket Opened" | "Ticket Closed" | "Ticket Reply";
+  sourceId?: string | null;
   subject: string;
   supabase: SupabaseAdmin;
   ticketId: string;
@@ -103,12 +154,17 @@ async function queueTicketEmail({
   let eventId: string | null = null;
 
   // First check if there's an existing event
-  const { data: existingEvent } = await supabase
+  let existingEventQuery = supabase
     .from("outbound_email_events")
     .select("event_id")
     .eq("ticket_id", ticketId)
-    .eq("notification_type", notificationType)
-    .maybeSingle<{ event_id: string }>();
+    .eq("notification_type", notificationType);
+  existingEventQuery = sourceId
+    ? existingEventQuery.eq("source_id", sourceId)
+    : existingEventQuery.is("source_id", null);
+  const { data: existingEvent } = await existingEventQuery.maybeSingle<{
+    event_id: string;
+  }>();
 
   if (existingEvent) {
     // Update existing event
@@ -121,6 +177,7 @@ async function queueTicketEmail({
         gmail_thread_id: gmailThreadId,
         recipient_email: customerEmail,
         recipient_name: customerName,
+        source_id: sourceId,
         sent_at: null,
         status: "Pending",
         provider: "postmark",
@@ -145,6 +202,7 @@ async function queueTicketEmail({
         notification_type: notificationType,
         recipient_email: customerEmail,
         recipient_name: customerName,
+        source_id: sourceId,
         status: "Pending",
         provider: "postmark",
         subject,
@@ -183,15 +241,17 @@ async function queueTicketEmail({
       .eq("event_id", eventId);
 
     // Also update the ticket's customer_notified_at or closure_notified_at
-    const ticketUpdate =
-      notificationType === "Ticket Opened"
-        ? { customer_notified_at: new Date().toISOString() }
-        : { closure_notified_at: new Date().toISOString() };
+    if (notificationType !== "Ticket Reply") {
+      const ticketUpdate =
+        notificationType === "Ticket Opened"
+          ? { customer_notified_at: new Date().toISOString() }
+          : { closure_notified_at: new Date().toISOString() };
 
-    await supabase
-      .from("tickets")
-      .update(ticketUpdate)
-      .eq("ticket_id", ticketId);
+      await supabase
+        .from("tickets")
+        .update(ticketUpdate)
+        .eq("ticket_id", ticketId);
+    }
 
     return true;
   } catch (error) {

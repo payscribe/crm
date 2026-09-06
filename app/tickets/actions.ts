@@ -3,7 +3,8 @@
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import {
   queueTicketClosedEmail,
-  queueTicketOpenedEmail
+  queueTicketOpenedEmail,
+  queueTicketReplyEmail
 } from "@/lib/email/outbound-events";
 import { deliverSlackEventsImmediately } from "@/lib/notifications/automation-delivery";
 import { sendSlackChannelMessage } from "@/lib/notifications/slack";
@@ -15,6 +16,7 @@ import {
   withSlackMentions
 } from "@/lib/notifications/ticket-messages";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { uploadTicketAttachment } from "@/lib/support/ticket-attachments";
 import type { NewAutomationEvent } from "@/lib/types/automation-events";
 import type { StaffUser } from "@/lib/types/users";
 import {
@@ -931,6 +933,11 @@ export async function addTicketNote(formData: FormData) {
   const { supabase, currentUser, permissions } = await getCurrentUserContext();
   const ticketId = optionalText(formData.get("ticket_id"));
   const noteBody = optionalText(formData.get("note_body"));
+  const attachmentEntry = formData.get("attachment");
+  const attachment =
+    attachmentEntry instanceof File && attachmentEntry.size > 0
+      ? attachmentEntry
+      : null;
   const explicitMentionedUserIds = new Set(
     formData
       .getAll("mentioned_user_ids")
@@ -946,11 +953,12 @@ export async function addTicketNote(formData: FormData) {
     ticketRedirect(ticketId, "You do not have permission to add ticket notes");
   }
 
-  if (!noteBody) {
-    ticketRedirect(ticketId, "Note cannot be empty");
+  if (!noteBody && !attachment) {
+    ticketRedirect(ticketId, "Add a message or attachment");
   }
 
   const currentStatus = await getTicketStatus(supabase, ticketId);
+  const messageBody = noteBody ?? "";
 
   if (currentStatus === "Closed") {
     ticketRedirect(ticketId, "Closed tickets cannot be edited or updated");
@@ -962,13 +970,16 @@ export async function addTicketNote(formData: FormData) {
   ] = await Promise.all([
     supabase
       .from("tickets")
-      .select("ticket_id, subject, business_id, assigned_to")
+      .select("ticket_id, subject, business_id, assigned_to, customer_email, customer_name, inbound_email_thread_id")
       .eq("ticket_id", ticketId)
       .single<{
         ticket_id: string;
         subject: string;
         business_id: string;
         assigned_to: string | null;
+        customer_email: string | null;
+        customer_name: string | null;
+        inbound_email_thread_id: string | null;
       }>(),
     supabase
       .from("users")
@@ -1010,17 +1021,42 @@ export async function addTicketNote(formData: FormData) {
     // If Step 8 has not been applied yet, notes still work without opener DMs.
   }
 
+  supabaseAdmin = supabaseAdmin ?? createSupabaseAdminClient();
+  let uploadedAttachment = null;
+  try {
+    uploadedAttachment = attachment
+      ? await uploadTicketAttachment({
+          file: attachment,
+          supabase: supabaseAdmin,
+          ticketId
+        })
+      : null;
+  } catch (uploadError) {
+    ticketRedirect(
+      ticketId,
+      uploadError instanceof Error ? uploadError.message : "Attachment upload failed"
+    );
+  }
+
   const { data: note, error } = await supabase
     .from("ticket_notes")
     .insert({
       ticket_id: ticketId,
-      note_body: noteBody,
-      created_by: currentUser.user_id
+      note_body: messageBody,
+      created_by: currentUser.user_id,
+      sender_type: "agent",
+      sender_name: currentUser.full_name,
+      attachments: uploadedAttachment ? [uploadedAttachment] : []
     })
     .select("note_id")
     .single<{ note_id: string }>();
 
   if (error) {
+    if (uploadedAttachment) {
+      await supabaseAdmin.storage
+        .from("ticket-attachments")
+        .remove([uploadedAttachment.path]);
+    }
     ticketRedirect(ticketId, error.message);
   }
 
@@ -1040,15 +1076,17 @@ export async function addTicketNote(formData: FormData) {
     }
   }
 
-  for (const userId of mentionedUserIds(noteBody, staffMembers ?? [])) {
+  for (const userId of mentionedUserIds(messageBody, staffMembers ?? [])) {
     notifiedUserIds.add(userId);
   }
 
   // Keep the author in the recipient list when they are the opener, assignee,
   // or explicitly selected in the mention picker.
   const authorName = currentUser.full_name;
-  const preview =
-    noteBody.length > 180 ? `${noteBody.slice(0, 177).trim()}...` : noteBody;
+  const notificationBody = messageBody || `Attachment: ${uploadedAttachment?.name}`;
+  const preview = notificationBody.length > 180
+    ? `${notificationBody.slice(0, 177).trim()}...`
+    : notificationBody;
   const noteMessage = ticketNoteSlackMessage({
     addedBy: authorName,
     note: preview,
@@ -1100,6 +1138,31 @@ export async function addTicketNote(formData: FormData) {
     mentionSlackUserIds,
     message: noteMessage
   });
+
+  const businessContact = ticket.business_id
+    ? await getBusinessTicketContact(supabase, ticket.business_id)
+    : null;
+  const recipientEmail = ticket.customer_email ?? businessContact?.email ?? null;
+  const recipientName =
+    ticket.customer_name ?? businessCustomerName(businessContact);
+
+  if (recipientEmail && note?.note_id) {
+    await queueTicketReplyEmail({
+      agentName: currentUser.full_name,
+      customerEmail: recipientEmail,
+      customerName: recipientName,
+      gmailThreadId: ticket.inbound_email_thread_id,
+      message: notificationBody,
+      noteId: note.note_id,
+      subject: ticket.subject,
+      supabase: supabaseAdmin,
+      ticketId
+    });
+  }
+
+  if (optionalText(formData.get("realtime_chat")) === "yes") {
+    return;
+  }
 
   revalidatePath(`/tickets/${ticketId}`);
   redirect(`/tickets/${ticketId}?success=Note%20added`);

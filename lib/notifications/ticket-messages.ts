@@ -171,3 +171,22 @@ export function ticketNoteSlackMessage({
     ["Note", note]
   ]);
 }
+
+export function ticketCustomerReplySlackMessage({
+  customerName,
+  message,
+  subject,
+  ticketId
+}: {
+  customerName: string;
+  message: string;
+  subject: string;
+  ticketId: string;
+}) {
+  return slackFieldTable("CUSTOMER REPLY", [
+    ["Ticket ID", ticketId],
+    ["Subject", subject],
+    ["From", customerName],
+    ["Message", message]
+  ]);
+}

@@ -67,15 +67,17 @@ async function handleSendPending(request: Request) {
         })
         .eq("event_id", event.event_id);
 
-      const ticketUpdate =
-        event.notification_type === "Ticket Opened"
-          ? { customer_notified_at: new Date().toISOString() }
-          : { closure_notified_at: new Date().toISOString() };
+      if (event.notification_type !== "Ticket Reply") {
+        const ticketUpdate =
+          event.notification_type === "Ticket Opened"
+            ? { customer_notified_at: new Date().toISOString() }
+            : { closure_notified_at: new Date().toISOString() };
 
-      await supabase
-        .from("tickets")
-        .update(ticketUpdate)
-        .eq("ticket_id", event.ticket_id);
+        await supabase
+          .from("tickets")
+          .update(ticketUpdate)
+          .eq("ticket_id", event.ticket_id);
+      }
 
       results.push({ eventId: event.event_id, success: true, messageId: result.MessageID });
     } catch (err) {

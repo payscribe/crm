@@ -58,7 +58,7 @@ function fromTicketNote(row: TicketNote): ActivityEntry {
     entityId: row.ticket_id,
     date: row.created_at,
     channel: null,
-    direction: null,
+    direction: row.sender_type === "customer" ? "Inbound" : "Outbound",
     actorId: row.created_by,
     summary: row.note_body
   };
