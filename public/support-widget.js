@@ -161,18 +161,19 @@
 
 	var style = createElement("style");
 	style.textContent =
+		".ps-support-panel[hidden],.ps-support-button[hidden]{display:none!important}" +
 		".ps-support-button{position:fixed;right:20px;bottom:20px;z-index:2147483000;display:grid;place-items:center;width:58px;height:58px;border:0;border-radius:999px;background:#3362b0;color:#fff;padding:0;box-shadow:0 12px 30px rgba(17,17,17,.22);cursor:pointer}" +
 		".ps-support-button svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}" +
-		".ps-support-panel{position:fixed;right:20px;bottom:78px;z-index:2147483000;width:min(380px,calc(100vw - 32px));max-height:min(620px,calc(100vh - 104px));overflow:auto;border:1px solid #e5e5e5;border-radius:12px;background:#fff;color:#111;font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 18px 45px rgba(17,17,17,.18)}" +
-		".ps-support-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:14px 16px}" +
-		".ps-support-brand{display:flex;align-items:center;gap:10px;min-width:0}.ps-support-logo{display:block;width:128px;height:auto;max-height:40px;object-fit:contain;object-position:left center;flex:0 0 auto;background:transparent!important;border-radius:0!important;padding:0!important}.ps-support-title{font-weight:700;color:#333;white-space:nowrap}.ps-support-close{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#555}" +
-		".ps-support-body{padding:16px}.ps-support-body p{margin:0 0 12px}.ps-support-muted{color:#666;font-size:12px}.ps-support-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}.ps-support-actions button{flex:1 1 150px;min-height:44px}.ps-support-actions .ps-support-link{flex:0 0 auto;min-height:auto}.ps-support-menu{display:grid;gap:10px;margin-top:12px}.ps-support-option{appearance:none!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;width:100%!important;box-sizing:border-box!important;border:1px solid #e8e8e8!important;border-radius:8px!important;background:#fff!important;color:#222!important;text-align:left!important;padding:12px!important;cursor:pointer!important;font:inherit!important}.ps-support-option:hover{border-color:#3362b0!important;background:#f8fbff!important}.ps-support-option-copy{display:block}.ps-support-option-title{display:block;font-weight:700;margin-bottom:3px}.ps-support-option-desc{display:block;color:#666;font-size:12px;line-height:1.35}.ps-support-option-arrow{color:#3362b0;font-weight:800}.ps-support-field{display:grid;gap:6px;margin-bottom:12px}.ps-support-field[hidden]{display:none!important}.ps-support-label{font-size:12px;font-weight:700;color:#444}" +
+		".ps-support-panel{position:fixed;right:20px;bottom:88px;z-index:2147483000;display:flex;flex-direction:column;width:min(390px,calc(100vw - 32px));height:auto;max-height:min(640px,calc(100dvh - 112px));overflow:hidden;border:1px solid #e5e7eb;border-radius:18px;background:#fff;color:#111827;font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 24px 64px rgba(15,23,42,.2)}.ps-support-panel.ps-support-panel-chat{height:min(640px,calc(100dvh - 112px))}" +
+		".ps-support-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;border-bottom:1px solid #eef0f3;padding:15px 18px;background:#fff}" +
+		".ps-support-brand{display:flex;align-items:center;gap:10px;min-width:0}.ps-support-logo{display:block;width:128px;height:auto;max-height:38px;object-fit:contain;object-position:left center;flex:0 0 auto;background:transparent!important;border-radius:0!important;padding:0!important}.ps-support-title{font-weight:700;color:#333;white-space:nowrap}.ps-support-close{appearance:none!important;display:grid!important;box-sizing:border-box!important;width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;place-items:center!important;margin:0!important;border:0!important;border-radius:999px!important;background:#f3f4f6!important;padding:0!important;cursor:pointer!important;color:#64748b!important;line-height:1!important;box-shadow:none!important;transform:none!important;transition:.2s}.ps-support-close:hover{background:#e5e7eb!important;color:#111827!important}.ps-support-close svg{display:block!important;width:16px!important;height:16px!important;margin:0!important;fill:none!important;stroke:currentColor!important;stroke-width:2.25!important;stroke-linecap:round!important;pointer-events:none}" +
+		".ps-support-body{flex:1;min-height:0;overflow:auto;padding:16px}.ps-support-body.ps-support-body-chat{display:flex;overflow:hidden;padding:0}.ps-support-body p{margin:0 0 12px}.ps-support-muted{color:#666;font-size:12px}.ps-support-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}.ps-support-actions button{flex:1 1 150px;min-height:44px}.ps-support-actions .ps-support-link{flex:0 0 auto;min-height:auto}.ps-support-menu{display:grid;gap:10px;margin-top:12px}.ps-support-option{appearance:none!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;width:100%!important;box-sizing:border-box!important;border:1px solid #e8e8e8!important;border-radius:8px!important;background:#fff!important;color:#222!important;text-align:left!important;padding:12px!important;cursor:pointer!important;font:inherit!important}.ps-support-option:hover{border-color:#3362b0!important;background:#f8fbff!important}.ps-support-option-copy{display:block}.ps-support-option-title{display:block;font-weight:700;margin-bottom:3px}.ps-support-option-desc{display:block;color:#666;font-size:12px;line-height:1.35}.ps-support-option-arrow{color:#3362b0;font-weight:800}.ps-support-field{display:grid;gap:6px;margin-bottom:12px}.ps-support-field[hidden]{display:none!important}.ps-support-label{font-size:12px;font-weight:700;color:#444}" +
 		".ps-support-input,.ps-support-select,.ps-support-textarea{width:100%;box-sizing:border-box;border:1px solid #d4d4d4;border-radius:8px;background:#fff;padding:10px 11px;font:14px system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;outline:none}" +
 		".ps-support-date-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ps-support-report{border:1px solid #eee;border-radius:8px;background:#fafafa;color:#222;margin:12px 0;padding:12px;white-space:pre-wrap;font:13px/1.55 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-height:330px;overflow:auto}" +
-		".ps-support-chat{display:flex;flex-direction:column;min-height:320px}.ps-support-chat-status{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding-bottom:10px}.ps-support-chat-status strong{font-size:13px}.ps-support-live{display:inline-flex;align-items:center;gap:5px;color:#15803d;font-size:11px}.ps-support-live:before{content:'';width:7px;height:7px;border-radius:50%;background:#22c55e}.ps-support-messages{display:flex;flex-direction:column;gap:10px;max-height:310px;overflow-y:auto;padding:14px 2px}.ps-support-message{max-width:84%;border-radius:14px;padding:9px 11px}.ps-support-message-agent{align-self:flex-start;border:1px solid #e5e7eb;border-bottom-left-radius:4px;background:#f5f7fa;color:#222}.ps-support-message-customer{align-self:flex-end;border-bottom-right-radius:4px;background:#3362b0;color:#fff}.ps-support-message-meta{display:flex;justify-content:space-between;gap:10px;margin-bottom:4px;font-size:10px;opacity:.72}.ps-support-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.45}.ps-support-attachment{margin-top:7px;overflow:hidden;border:1px solid currentColor;border-radius:9px;color:inherit;font-size:11px}.ps-support-attachment-preview{display:block;height:110px;background:#fff;color:#222;text-decoration:none}.ps-support-attachment-preview img,.ps-support-attachment-preview iframe{display:block;width:100%;height:100%;border:0;object-fit:cover}.ps-support-attachment-preview iframe{pointer-events:none}.ps-support-attachment-info{display:flex;align-items:center;gap:7px;padding:7px 9px}.ps-support-attachment-name{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.ps-support-attachment-action{color:inherit;font-weight:800;text-decoration:underline}.ps-support-chat-empty{margin:auto;color:#777;text-align:center;font-size:12px}.ps-support-composer{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:8px;border-top:1px solid #eee;padding-top:12px}.ps-support-composer textarea{min-height:44px;max-height:110px;resize:vertical}.ps-support-composer button{flex:0 0 auto;min-height:44px}.ps-support-attach{display:grid;place-items:center;width:44px;height:44px;border:1px solid #d4d4d4;border-radius:8px;background:#fff;color:#3362b0;font-size:20px;cursor:pointer}.ps-support-attach input{display:none}.ps-support-file-name{grid-column:1/-1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#666;font-size:11px}" +
-		".ps-support-textarea{min-height:110px;resize:vertical}.ps-support-primary,.ps-support-secondary{border:0;border-radius:8px;padding:10px 12px;font-weight:700;cursor:pointer}.ps-support-link{border:0;background:transparent;color:#3362b0;padding:8px 0;font-weight:700;cursor:pointer}" +
+		".ps-support-chat{display:flex;flex:1;min-height:0;width:100%;flex-direction:column;background:#f8fafc}.ps-support-chat-status{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #e5e7eb;background:#fff;padding:11px 16px}.ps-support-chat-status strong{font-size:12px;color:#374151}.ps-support-live{display:inline-flex;align-items:center;gap:5px;color:#15803d;font-size:11px;font-weight:600}.ps-support-live:before{content:'';width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.12)}.ps-support-messages{display:flex;flex:1;min-height:0;flex-direction:column;gap:12px;overflow-y:auto;padding:16px;scroll-behavior:smooth}.ps-support-message{max-width:82%;border-radius:16px;padding:10px 12px;box-shadow:0 1px 2px rgba(15,23,42,.06)}.ps-support-message-agent{align-self:flex-start;border:1px solid #e5e7eb;border-bottom-left-radius:5px;background:#fff;color:#1f2937}.ps-support-message-customer{align-self:flex-end;border-bottom-right-radius:5px;background:#3362b0;color:#fff}.ps-support-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:5px;font-size:10px;opacity:.72}.ps-support-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5}.ps-support-attachment{margin-top:9px;overflow:hidden;border:1px solid rgba(255,255,255,.28);border-radius:11px;color:inherit;font-size:11px}.ps-support-message-agent .ps-support-attachment{border-color:#e5e7eb}.ps-support-attachment-preview{display:block;height:128px;background:#fff;color:#222;text-decoration:none}.ps-support-attachment-preview img,.ps-support-attachment-preview iframe{display:block;width:100%;height:100%;border:0;object-fit:cover}.ps-support-attachment-preview iframe{pointer-events:none}.ps-support-attachment-info{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px}.ps-support-attachment-name{min-width:0;flex:1 1 100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.ps-support-attachment-action{display:inline-flex;border-radius:6px;background:rgba(255,255,255,.14);padding:3px 7px;color:inherit;font-weight:700;text-decoration:none}.ps-support-message-agent .ps-support-attachment-action{background:#eef2ff;color:#315fae}.ps-support-chat-empty{margin:auto;color:#6b7280;text-align:center;font-size:12px}.ps-support-chat-actions{display:flex;flex:0 0 auto;gap:14px;margin:0!important;border-top:1px solid #eef0f3;background:#fff;padding:8px 16px}.ps-support-chat-actions button{flex:0 0 auto!important;min-height:auto!important;padding:5px 0!important;font-size:12px}.ps-support-composer{display:grid;flex:0 0 auto;grid-template-columns:44px minmax(0,1fr) auto;align-items:end;gap:8px;border-top:1px solid #e5e7eb;background:#fff;padding:12px 14px 14px}.ps-support-composer textarea{display:block;height:44px;min-height:44px;max-height:96px;margin:0;resize:none;border-color:#d1d5db;border-radius:11px;padding:11px 12px;line-height:20px}.ps-support-composer textarea:focus{border-color:#3362b0;box-shadow:0 0 0 3px rgba(51,98,176,.12)}.ps-support-composer>.ps-support-primary{height:44px;min-height:44px;border-radius:11px;padding:0 15px}.ps-support-attach{display:grid;box-sizing:border-box;width:44px;height:44px;place-items:center;margin:0;border:1px solid #d1d5db;border-radius:11px;background:#fff;color:#3362b0;cursor:pointer;transition:.2s}.ps-support-attach:hover{border-color:#3362b0;background:#f5f8ff}.ps-support-attach svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.ps-support-attach input{display:none}.ps-support-file-name{grid-column:1/-1;overflow:hidden;border-radius:7px;background:#eef2ff;padding:6px 8px;text-overflow:ellipsis;white-space:nowrap;color:#315fae;font-size:11px}" +
+		".ps-support-chat>.ps-support-error{flex:0 0 auto;margin:10px 14px 0;padding:9px 11px}.ps-support-message-customer{border:1px solid #c9daf8;background:#e7effc;color:#173b70}.ps-support-message-customer .ps-support-attachment{border-color:#bfd1ef;background:rgba(255,255,255,.42)}.ps-support-message-customer .ps-support-attachment-action{background:#d4e2f8;color:#244f91}.ps-support-composer[hidden]{display:none!important}.ps-support-textarea{min-height:110px;resize:vertical}.ps-support-primary,.ps-support-secondary{border:0;border-radius:8px;padding:10px 12px;font-weight:700;cursor:pointer}.ps-support-link{border:0;background:transparent;color:#3362b0;padding:8px 0;font-weight:700;cursor:pointer}" +
 		".ps-support-primary{background:#3362b0;color:#fff}.ps-support-secondary{background:#f5f5f5;color:#222}.ps-support-error{border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:10px;margin-bottom:12px}" +
-		".ps-support-success{border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:8px;padding:10px;margin-bottom:12px}.ps-support-review{border:1px solid #eee;border-radius:8px;background:#fafafa;padding:10px;margin:12px 0}.ps-support-review div{margin:5px 0}";
+		".ps-support-success{border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:8px;padding:10px;margin-bottom:12px}.ps-support-review{border:1px solid #eee;border-radius:8px;background:#fafafa;padding:10px;margin:12px 0}.ps-support-review div{margin:5px 0}@media(max-width:520px){.ps-support-panel{right:8px;bottom:76px;width:calc(100vw - 16px);max-height:calc(100dvh - 92px);border-radius:16px}.ps-support-panel.ps-support-panel-chat{height:min(680px,calc(100dvh - 92px))}.ps-support-messages{padding:14px 12px}.ps-support-message{max-width:88%}.ps-support-composer{grid-template-columns:42px minmax(0,1fr) auto;padding:10px 11px 12px}.ps-support-attach,.ps-support-composer textarea,.ps-support-composer>.ps-support-primary{height:42px;min-height:42px}.ps-support-composer>.ps-support-primary{padding:0 13px}}";
 	document.head.appendChild(style);
 
 	var button = createElement("button", "ps-support-button");
@@ -190,7 +191,9 @@
 	logo.alt = "Payscribe";
 	brand.appendChild(logo);
 	header.appendChild(brand);
-	var close = createElement("button", "ps-support-close", "x");
+	var close = createElement("button", "ps-support-close");
+	close.type = "button";
+	close.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>';
 	close.setAttribute("aria-label", "Close support widget");
 	header.appendChild(close);
 	var body = createElement("div", "ps-support-body");
@@ -222,11 +225,21 @@
 		while (body.firstChild) {
 			body.removeChild(body.firstChild);
 		}
+		body.classList.remove("ps-support-body-chat");
+		panel.classList.remove("ps-support-panel-chat");
 	}
 
 	function showError(message) {
+		var existingError = body.querySelector(".ps-support-error");
+		if (existingError) existingError.remove();
 		var error = createElement("div", "ps-support-error", message);
-		body.insertBefore(error, body.firstChild);
+		var chat = body.querySelector(".ps-support-chat");
+		var messages = chat && chat.querySelector(".ps-support-messages");
+		if (chat && messages) {
+			chat.insertBefore(error, messages);
+		} else {
+			body.insertBefore(error, body.firstChild);
+		}
 	}
 
 	function formatReportMeta(meta) {
@@ -534,6 +547,8 @@
 
 	function renderConversation(ticketReference, initialResult) {
 		clearBody();
+		body.classList.add("ps-support-body-chat");
+		panel.classList.add("ps-support-panel-chat");
 		var chat = createElement("div", "ps-support-chat");
 		var statusRow = createElement("div", "ps-support-chat-status");
 		var statusText = createElement("strong", "", "Ticket " + ticketReference);
@@ -545,8 +560,10 @@
 		var messages = createElement("div", "ps-support-messages");
 		chat.appendChild(messages);
 		var composer = createElement("div", "ps-support-composer");
-		var attachLabel = createElement("label", "ps-support-attach", "＋");
+		var attachLabel = createElement("label", "ps-support-attach");
 		attachLabel.title = "Add attachment";
+		attachLabel.setAttribute("aria-label", "Add attachment");
+		attachLabel.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l10-10a4 4 0 0 1 5.7 5.7l-10 10a2 2 0 1 1-2.8-2.8l9.3-9.3"></path></svg>';
 		var attachmentInput = createElement("input");
 		attachmentInput.type = "file";
 		attachmentInput.accept = "image/jpeg,image/png,image/webp,application/pdf,text/plain,.doc,.docx";
@@ -554,6 +571,10 @@
 		var reply = createElement("textarea", "ps-support-textarea");
 		reply.placeholder = "Reply to support...";
 		reply.maxLength = 2000;
+		reply.oninput = function () {
+			reply.style.height = "44px";
+			reply.style.height = Math.min(reply.scrollHeight, 96) + "px";
+		};
 		var send = createElement("button", "ps-support-primary", "Send");
 		composer.appendChild(attachLabel);
 		composer.appendChild(reply);
@@ -571,17 +592,17 @@
 			fileName.textContent = file ? "Attached: " + file.name : "";
 			fileName.hidden = !file;
 		};
-		chat.appendChild(composer);
-		body.appendChild(chat);
-
 		var actions = createElement("div", "ps-support-actions");
+		actions.classList.add("ps-support-chat-actions");
 		var another = createElement("button", "ps-support-link", "Open another ticket");
 		another.onclick = function () {
 			renderStatusCheck("");
 		};
 		actions.appendChild(another);
 		actions.appendChild(renderBackToIntro());
-		body.appendChild(actions);
+		chat.appendChild(actions);
+		chat.appendChild(composer);
+		body.appendChild(chat);
 		var conversationResult = initialResult || { status: "open", responses: [] };
 
 		function updateConversation(result) {
@@ -706,6 +727,7 @@
 			})
 				.then(function (result) {
 					reply.value = "";
+					reply.style.height = "44px";
 					attachmentInput.value = "";
 					fileName.hidden = true;
 					if (result && result.message) appendMessage(result.message);
