@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatDate } from "@/lib/format/date";
 import Image from "next/image";
 import type { TicketNote } from "@/lib/types/tickets";
@@ -36,6 +35,7 @@ export function TicketConversation({
   const [messages, setMessages] = useState(initialMessages);
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [liveState, setLiveState] = useState<"connecting" | "live" | "reconnecting">("connecting");
   const endRef = useRef<HTMLDivElement>(null);
   const openRef = useRef(false);
   const staffById = useMemo(
@@ -66,31 +66,43 @@ export function TicketConversation({
   }, [open]);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(`ticket-conversation:${ticketId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "ticket_notes",
-          filter: `ticket_id=eq.${ticketId}`
-        },
-        (payload) => {
-          const incoming = payload.new as TicketNote;
-          setMessages((current) =>
-            current.some((message) => message.note_id === incoming.note_id)
-              ? current
-              : [...current, incoming]
-          );
-          if (!openRef.current) setUnread((current) => current + 1);
+    const stream = new EventSource(
+      `/api/tickets/${encodeURIComponent(ticketId)}/stream`
+    );
+
+    function addMessage(incoming: TicketNote) {
+      setMessages((current) => {
+        if (current.some((message) => message.note_id === incoming.note_id)) {
+          return current;
         }
-      )
-      .subscribe();
+        if (!openRef.current) setUnread((count) => count + 1);
+        return [...current, incoming];
+      });
+    }
+
+    stream.onopen = () => setLiveState("connecting");
+    stream.addEventListener("ready", () => setLiveState("live"));
+    stream.addEventListener("snapshot", (event) => {
+      try {
+        const snapshot = JSON.parse(event.data) as TicketNote[];
+        snapshot.forEach(addMessage);
+        setLiveState("live");
+      } catch {
+        setLiveState("reconnecting");
+      }
+    });
+    stream.onmessage = (event) => {
+      try {
+        addMessage(JSON.parse(event.data) as TicketNote);
+        setLiveState("live");
+      } catch {
+        setLiveState("reconnecting");
+      }
+    };
+    stream.onerror = () => setLiveState("reconnecting");
 
     return () => {
-      void supabase.removeChannel(channel);
+      stream.close();
     };
   }, [ticketId]);
 
@@ -124,7 +136,11 @@ export function TicketConversation({
             <div className="flex items-start justify-between gap-4 border-b border-neutral-200 px-5 py-4">
               <div>
                 <h3 className="text-base font-semibold text-neutral-950">Ticket Conversation</h3>
-                <p className="mt-1 text-xs text-neutral-500">{ticketId} · Live updates</p>
+                <p className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
+                  {ticketId}
+                  <span className={`h-2 w-2 rounded-full ${liveState === "live" ? "bg-emerald-500" : liveState === "reconnecting" ? "bg-amber-500" : "bg-neutral-400"}`} />
+                  {liveState === "live" ? "Live" : liveState === "reconnecting" ? "Reconnecting" : "Connecting"}
+                </p>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-full border border-neutral-200 text-xl text-neutral-600 hover:border-payscribe-blue hover:text-payscribe-blue" aria-label="Close conversation">
                 ×
