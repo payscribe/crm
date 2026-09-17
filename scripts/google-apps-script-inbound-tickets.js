@@ -1,152 +1,159 @@
-const CRM_WEBHOOK_URL = "https://YOUR_APP_DOMAIN/api/inbound-email/google-apps-script";
-const CRM_PENDING_REPLIES_URL = "https://YOUR_APP_DOMAIN/api/outbound-email/google-apps-script/pending";
-const CRM_MARK_REPLY_SENT_URL = "https://YOUR_APP_DOMAIN/api/outbound-email/google-apps-script/mark-sent";
-const SECRET_TOKEN = "PASTE_THE_SAME_VALUE_AS_INBOUND_EMAIL_WEBHOOK_SECRET";
-const MAX_THREADS_PER_RUN = 20;
-const INBOUND_SEARCH_QUERY = "in:inbox is:unread newer_than:14d";
+// Paste into a script owned by the mailbox that receives support email.
+// Set Script Properties: CRM_BASE_URL, CRM_SECRET, MAILBOX_EMAIL,
+// INBOUND_QUERY, INBOUND_START_AT.
+// During testing, also set TEST_RECIPIENT in both Apps Script and the CRM's
+// GOOGLE_EMAIL_TEST_RECIPIENT. Use an external address to test inbound mail:
+// the Postmark rules ignore @payscribe.co senders.
+const THREAD_PAGE_SIZE = 50;
+const MAX_THREAD_PAGES = 5;
+const MAX_MESSAGES_PER_RUN = 50;
+
+function crmSettings() {
+  const properties = PropertiesService.getScriptProperties();
+  const baseUrl = properties.getProperty("CRM_BASE_URL");
+  const secret = properties.getProperty("CRM_SECRET");
+  const mailbox = properties.getProperty("MAILBOX_EMAIL");
+  const inboundQuery = properties.getProperty("INBOUND_QUERY");
+  const inboundStartAt = properties.getProperty("INBOUND_START_AT");
+  if (!baseUrl || !secret || !mailbox || !inboundQuery ||
+      !inboundStartAt || isNaN(new Date(inboundStartAt).getTime())) {
+    throw new Error("Set CRM_BASE_URL, CRM_SECRET, MAILBOX_EMAIL, INBOUND_QUERY and INBOUND_START_AT in Script Properties.");
+  }
+  return { baseUrl: baseUrl.replace(/\/$/, ""), secret, mailbox: mailbox.toLowerCase(),
+    inboundQuery, inboundStartAt: new Date(inboundStartAt).getTime(),
+    testRecipient: properties.getProperty("TEST_RECIPIENT") };
+}
+
+function crmRequest(path, method, payload) {
+  const settings = crmSettings();
+  const response = UrlFetchApp.fetch(settings.baseUrl + path, {
+    method,
+    contentType: "application/json",
+    headers: { Authorization: "Bearer " + settings.secret, "X-CRM-Mailbox": settings.mailbox },
+    payload: payload ? JSON.stringify(payload) : undefined,
+    muteHttpExceptions: true
+  });
+  const text = response.getContentText();
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+    throw new Error(path + " returned " + response.getResponseCode() + ": " + text);
+  }
+  return JSON.parse(text);
+}
+
+function withScriptLock(work) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) return;
+  try { work(); } finally { lock.releaseLock(); }
+}
 
 function processInboundTickets() {
-  const threads = GmailApp.search(INBOUND_SEARCH_QUERY, 0, MAX_THREADS_PER_RUN);
-
-  for (const thread of threads) {
-    const messages = thread.getMessages();
-
-    for (const message of messages) {
-      if (!message.isUnread()) {
-        continue;
+  withScriptLock(function () {
+    const settings = crmSettings();
+    const properties = PropertiesService.getScriptProperties();
+    let attempted = 0;
+    for (let page = 0; page < MAX_THREAD_PAGES && attempted < MAX_MESSAGES_PER_RUN; page++) {
+      const threads = GmailApp.search(settings.inboundQuery, page * THREAD_PAGE_SIZE, THREAD_PAGE_SIZE);
+      if (threads.length === 0) break;
+      for (const thread of threads) {
+        for (const message of thread.getMessages()) {
+          if (attempted >= MAX_MESSAGES_PER_RUN) break;
+          // Read status is not a processing marker; staff can open mail freely.
+          if (!message.isInInbox() || message.isDraft()) continue;
+          if (message.getDate().getTime() < settings.inboundStartAt) continue;
+          const marker = "inbound_" + message.getId();
+          if (properties.getProperty(marker)) continue;
+          attempted++;
+          const headers = ["Auto-Submitted", "Precedence", "X-Autoreply",
+            "X-Auto-Response-Suppress", "List-Id", "List-Unsubscribe", "Content-Type",
+            "In-Reply-To"].map(function (name) {
+              return { Name: name, Value: message.getHeader(name) || "" };
+            });
+          try {
+            crmRequest("/api/inbound-email/google-apps-script", "post", {
+              emailId: message.getId(), threadId: thread.getId(),
+              from: message.getFrom(), replyTo: message.getReplyTo(), to: message.getTo(),
+              subject: message.getSubject(), body: message.getPlainBody(),
+              htmlBody: message.getBody(), date: message.getDate().toISOString(), headers
+            });
+            properties.setProperty(marker, new Date().toISOString());
+          } catch (error) {
+            Logger.log("Inbound " + message.getId() + ": " + error);
+          }
+        }
       }
+      if (threads.length < THREAD_PAGE_SIZE) break;
+    }
+  });
+}
 
-      const payload = {
-        emailId: message.getId(),
-        threadId: thread.getId(),
-        from: message.getFrom(),
-        subject: message.getSubject(),
-        body: message.getPlainBody(),
-        date: message.getDate().toISOString()
-      };
+function processOutboundTicketEmails() {
+  withScriptLock(function () {
+    const settings = crmSettings();
+    if (MailApp.getRemainingDailyQuota() < 1) {
+      Logger.log("Google sending quota exhausted; outbound queue left intact.");
+      return;
+    }
+    const properties = PropertiesService.getScriptProperties();
+    const events = crmRequest("/api/outbound-email/google-apps-script/pending", "get").events || [];
+    for (const event of events) {
+      if (MailApp.getRemainingDailyQuota() < 1) break;
+      const marker = "outbound_" + event.event_id;
+      const attemptsMarker = "attempts_" + event.event_id;
+      if (!properties.getProperty(marker) &&
+          Number(properties.getProperty(attemptsMarker) || 0) >= 5) continue;
+      try {
+        if (!properties.getProperty(marker)) {
+          if (settings.testRecipient &&
+              event.recipient_email.toLowerCase() !== settings.testRecipient.toLowerCase()) {
+            throw new Error("Test recipient does not match CRM configuration");
+          }
+          sendTicketEmail(event, settings);
+          // Keep a local receipt when the CRM acknowledgement fails.
+          properties.setProperty(marker, new Date().toISOString());
+        }
+        crmRequest("/api/outbound-email/google-apps-script/mark-sent", "post",
+          { eventId: event.event_id, status: "Sent" });
+        properties.deleteProperty(attemptsMarker);
+      } catch (error) {
+        Logger.log("Outbound " + event.event_id + ": " + error);
+        // If Gmail already accepted the message, leave it for acknowledgement
+        // on the next run; reporting Failed would risk a duplicate send.
+        if (properties.getProperty(marker)) continue;
+        properties.setProperty(attemptsMarker,
+          String(Number(properties.getProperty(attemptsMarker) || 0) + 1));
+        try {
+          crmRequest("/api/outbound-email/google-apps-script/mark-sent", "post",
+            { eventId: event.event_id, status: "Failed", errorMessage: String(error) });
+        } catch (reportError) {
+          Logger.log("Could not record failure for " + event.event_id + ": " + reportError);
+        }
+      }
+    }
+  });
+}
 
-      const result = forwardToCRM(payload);
-
-      if (result.success) {
-        message.markRead();
-        Logger.log(`CRM accepted ${payload.emailId} as ticket ${result.ticketId}`);
-      } else {
-        Logger.log(`CRM failed for ${payload.emailId}: ${result.error}`);
+function sendTicketEmail(event, settings) {
+  const options = event.body_html ? { htmlBody: event.body_html } : {};
+  const threadId = String(event.gmail_thread_id || "");
+  if (!settings.testRecipient && threadId && threadId.indexOf("manual:") !== 0) {
+    const thread = GmailApp.getThreadById(threadId);
+    if (thread) {
+      const messages = thread.getMessages();
+      for (let index = messages.length - 1; index >= 0; index--) {
+        const sender = messages[index].getFrom().toLowerCase();
+        const replyTo = messages[index].getReplyTo().toLowerCase();
+        if (sender.indexOf(event.recipient_email.toLowerCase()) >= 0 ||
+            replyTo.indexOf(event.recipient_email.toLowerCase()) >= 0) {
+          messages[index].reply(event.body_text, options);
+          return;
+        }
       }
     }
   }
+  GmailApp.sendEmail(event.recipient_email, event.subject, event.body_text, options);
 }
 
-function forwardToCRM(payload) {
-  const options = {
-    method: "post",
-    contentType: "application/json",
-    headers: {
-      Authorization: "Bearer " + SECRET_TOKEN
-    },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
-
-  try {
-    const response = UrlFetchApp.fetch(CRM_WEBHOOK_URL, options);
-    const status = response.getResponseCode();
-    const body = response.getContentText();
-
-    if (status >= 200 && status < 300) {
-      const parsed = JSON.parse(body);
-      Logger.log(`CRM response for ${payload.emailId}: ${body}`);
-      return {
-        success: true,
-        ticketId: parsed.ticketId,
-        queuedCustomerReply: parsed.queuedCustomerReply
-      };
-    }
-
-    return {
-      success: false,
-      error: `${status}: ${body}`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.toString()
-    };
-  }
-}
-
-function processOutboundReplies() {
-  const pending = fetchPendingOutboundReplies();
-
-  if (pending.length === 0) {
-    Logger.log("No pending outbound Gmail replies.");
-    return;
-  }
-
-  for (const event of pending) {
-    try {
-      if (String(event.gmail_thread_id || "").indexOf("manual:") === 0) {
-        GmailApp.sendEmail(event.recipient_email, event.subject, event.body_text);
-        markOutboundReply(event.event_id, "Sent", "");
-        Logger.log(`Sent ${event.notification_type || "ticket"} email for ${event.ticket_id}`);
-        continue;
-      }
-
-      const thread = GmailApp.getThreadById(event.gmail_thread_id);
-      if (!thread) {
-        markOutboundReply(event.event_id, "Failed", "Gmail thread not found");
-        continue;
-      }
-
-      thread.reply(event.body_text);
-      markOutboundReply(event.event_id, "Sent", "");
-      Logger.log(`Sent ${event.notification_type || "ticket"} reply for ${event.ticket_id}`);
-    } catch (error) {
-      markOutboundReply(event.event_id, "Failed", error.toString());
-      Logger.log(`Failed ${event.notification_type || "ticket"} reply for ${event.ticket_id}: ${error}`);
-    }
-  }
-}
-
-function fetchPendingOutboundReplies() {
-  const options = {
-    method: "get",
-    headers: {
-      Authorization: "Bearer " + SECRET_TOKEN
-    },
-    muteHttpExceptions: true
-  };
-
-  const response = UrlFetchApp.fetch(CRM_PENDING_REPLIES_URL, options);
-  const status = response.getResponseCode();
-  const body = response.getContentText();
-
-  if (status < 200 || status >= 300) {
-    Logger.log(`CRM pending replies failed: ${status}: ${body}`);
-    return [];
-  }
-
-  return JSON.parse(body).events || [];
-}
-
-function markOutboundReply(eventId, status, errorMessage) {
-  const options = {
-    method: "post",
-    contentType: "application/json",
-    headers: {
-      Authorization: "Bearer " + SECRET_TOKEN
-    },
-    payload: JSON.stringify({
-      eventId,
-      status,
-      errorMessage
-    }),
-    muteHttpExceptions: true
-  };
-
-  const response = UrlFetchApp.fetch(CRM_MARK_REPLY_SENT_URL, options);
-
-  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
-    Logger.log(`Failed to mark outbound reply ${eventId}: ${response.getContentText()}`);
-  }
+function processSupportEmail() {
+  processInboundTickets();
+  processOutboundTicketEmails();
 }

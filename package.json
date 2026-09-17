@@ -6,6 +6,7 @@
     "dev": "next dev",
     "fresh-dev": "powershell -ExecutionPolicy Bypass -File scripts/fresh-dev.ps1",
     "build": "next build",
+    "test:email-script": "node --test scripts/google-apps-script-inbound-tickets.test.cjs scripts/inbound-ticket-matching.test.cjs",
     "start": "next start",
     "lint": "next lint"
   },

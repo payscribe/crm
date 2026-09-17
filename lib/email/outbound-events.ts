@@ -151,12 +151,15 @@ async function queueTicketEmail({
   supabase: SupabaseAdmin;
   ticketId: string;
 }) {
+  const provider = process.env.EMAIL_PROVIDER === "google_apps_script"
+    ? "google_apps_script" : "postmark";
+  const storedThreadId = gmailThreadId ?? `manual:${ticketId}`;
   let eventId: string | null = null;
 
   // First check if there's an existing event
   let existingEventQuery = supabase
     .from("outbound_email_events")
-    .select("event_id")
+    .select("event_id, status, provider")
     .eq("ticket_id", ticketId)
     .eq("notification_type", notificationType);
   existingEventQuery = sourceId
@@ -164,7 +167,13 @@ async function queueTicketEmail({
     : existingEventQuery.is("source_id", null);
   const { data: existingEvent } = await existingEventQuery.maybeSingle<{
     event_id: string;
+    status: string;
+    provider: string;
   }>();
+
+  // A retry of the inbound webhook must not send an acknowledgement twice.
+  if (existingEvent?.status === "Sent") return true;
+  if (existingEvent?.status === "Pending" && existingEvent.provider === provider) return true;
 
   if (existingEvent) {
     // Update existing event
@@ -174,13 +183,13 @@ async function queueTicketEmail({
         body_text: bodyText,
         body_html: bodyHtml,
         error_message: null,
-        gmail_thread_id: gmailThreadId,
+        gmail_thread_id: storedThreadId,
         recipient_email: customerEmail,
         recipient_name: customerName,
         source_id: sourceId,
         sent_at: null,
         status: "Pending",
-        provider: "postmark",
+        provider,
         subject
       })
       .eq("event_id", existingEvent.event_id)
@@ -198,13 +207,13 @@ async function queueTicketEmail({
       .insert({
         body_text: bodyText,
         body_html: bodyHtml,
-        gmail_thread_id: gmailThreadId,
+        gmail_thread_id: storedThreadId,
         notification_type: notificationType,
         recipient_email: customerEmail,
         recipient_name: customerName,
         source_id: sourceId,
         status: "Pending",
-        provider: "postmark",
+        provider,
         subject,
         ticket_id: ticketId
       })
@@ -216,6 +225,8 @@ async function queueTicketEmail({
     }
     eventId = data.event_id;
   }
+
+  if (provider === "google_apps_script") return true;
 
   // Now try to send the email immediately
   try {
