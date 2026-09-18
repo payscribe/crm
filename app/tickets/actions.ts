@@ -486,6 +486,7 @@ async function postTicketSlackThreadReply({
       message: withSlackMentions(message, mentionSlackUserIds),
       module: "Tickets",
       recordId: ticketId,
+      replyBroadcast: true,
       threadTs: thread.threadTs,
       token
     });

@@ -310,6 +310,7 @@ export async function POST(request: Request, { params }: TicketLookupProps) {
       await sendSlackChannelMessage({
         channelId: ticket.slack_channel_id,
         threadTs: ticket.slack_thread_ts,
+        replyBroadcast: true,
         message: slackMessage,
         module: "Tickets",
         recordId: ticket.ticket_id,

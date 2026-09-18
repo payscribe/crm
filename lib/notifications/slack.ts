@@ -94,6 +94,7 @@ export async function sendSlackChannelMessage({
   message,
   module,
   recordId,
+  replyBroadcast = false,
   threadTs,
   token
 }: {
@@ -101,6 +102,7 @@ export async function sendSlackChannelMessage({
   message: string;
   module?: string | null;
   recordId?: string | null;
+  replyBroadcast?: boolean;
   threadTs?: string | null;
   token: string;
 }) {
@@ -113,7 +115,12 @@ export async function sendSlackChannelMessage({
         module,
         recordId
       }),
-      ...(threadTs ? { thread_ts: threadTs } : {})
+      ...(threadTs
+        ? {
+            thread_ts: threadTs,
+            ...(replyBroadcast ? { reply_broadcast: true } : {})
+          }
+        : {})
     },
     token
   );
