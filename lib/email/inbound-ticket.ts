@@ -164,6 +164,31 @@ export async function processInboundTicket(
     .ilike("email", sender.email)
     .maybeSingle<{ business_id: string; business_name: string }>();
 
+  if (!business) {
+    const { error: ignoredEventError } = await supabase.from("inbound_email_events").insert({
+      provider,
+      provider_message_id: emailId,
+      provider_thread_id: threadId,
+      sender_email: sender.email,
+      sender_name: sender.name,
+      subject,
+      body_text: body,
+      received_at: receivedAt.toISOString(),
+      raw_payload: payload,
+      processing_status: "Processed",
+      error_message: "Sender email is not linked to a registered business; ticket not created."
+    });
+
+    if (ignoredEventError && !ignoredEventError.message.includes("duplicate key")) {
+      return NextResponse.json({ error: ignoredEventError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      ignored: true,
+      reason: "sender email is not linked to a registered business"
+    });
+  }
+
   const { error: eventError } = await supabase.from("inbound_email_events").insert({
     provider,
     provider_message_id: emailId,
@@ -192,7 +217,7 @@ export async function processInboundTicket(
       subject,
       issue_description: body,
       interaction_mode: "Inbound",
-      account_status: business ? "Active" : "NA",
+      account_status: "Active",
       priority: "Medium",
       assigned_to: null,
       status: "Open",
@@ -227,7 +252,7 @@ export async function processInboundTicket(
 
   await markInboundEvent(supabase, emailId, {
     ticket_id: createdTicket.ticket_id,
-    matched_business_id: business?.business_id ?? null,
+    matched_business_id: business.business_id,
     processing_status: "Processed",
     error_message: null
   });
@@ -240,7 +265,7 @@ export async function processInboundTicket(
   return NextResponse.json(
     {
       ticketId: createdTicket.ticket_id,
-      matchedBusinessId: business?.business_id ?? null,
+      matchedBusinessId: business.business_id,
       queuedCustomerReply
     },
     { status: 201 }
