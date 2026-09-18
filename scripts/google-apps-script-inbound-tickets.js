@@ -1,8 +1,9 @@
 // Paste into a script owned by the mailbox that receives support email.
 // Set Script Properties: CRM_BASE_URL, CRM_SECRET, MAILBOX_EMAIL,
 // INBOUND_QUERY, INBOUND_START_AT.
-// During testing, also set TEST_RECIPIENT in both Apps Script and the CRM's
-// GOOGLE_EMAIL_TEST_RECIPIENT. Use an external address to test inbound mail:
+// For a focused live test, set TEST_TICKET_ID and TEST_RECIPIENT to the
+// ticket being tested and its actual external sender address.
+// Use an external address to test inbound mail:
 // the Postmark rules ignore @payscribe.co senders.
 const THREAD_PAGE_SIZE = 50;
 const MAX_THREAD_PAGES = 5;
@@ -21,7 +22,8 @@ function crmSettings() {
   }
   return { baseUrl: baseUrl.replace(/\/$/, ""), secret, mailbox: mailbox.toLowerCase(),
     inboundQuery, inboundStartAt: new Date(inboundStartAt).getTime(),
-    testRecipient: properties.getProperty("TEST_RECIPIENT") };
+    testRecipient: properties.getProperty("TEST_RECIPIENT"),
+    testTicketId: properties.getProperty("TEST_TICKET_ID") };
 }
 
 function crmRequest(path, method, payload) {
@@ -29,7 +31,8 @@ function crmRequest(path, method, payload) {
   const response = UrlFetchApp.fetch(settings.baseUrl + path, {
     method,
     contentType: "application/json",
-    headers: { Authorization: "Bearer " + settings.secret, "X-CRM-Mailbox": settings.mailbox },
+    headers: { Authorization: "Bearer " + settings.secret, "X-CRM-Mailbox": settings.mailbox,
+      "Cache-Control": "no-cache" },
     payload: payload ? JSON.stringify(payload) : undefined,
     muteHttpExceptions: true
   });
@@ -42,7 +45,10 @@ function crmRequest(path, method, payload) {
 
 function withScriptLock(work) {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(1000)) return;
+  if (!lock.tryLock(1000)) {
+    Logger.log("Email processing skipped: another run holds the script lock.");
+    return;
+  }
   try { work(); } finally { lock.releaseLock(); }
 }
 
@@ -94,8 +100,23 @@ function processOutboundTicketEmails() {
       return;
     }
     const properties = PropertiesService.getScriptProperties();
-    const events = crmRequest("/api/outbound-email/google-apps-script/pending", "get").events || [];
+    const pendingPath = "/api/outbound-email/google-apps-script/pending" +
+      (settings.testTicketId ? "?ticketId=" + encodeURIComponent(settings.testTicketId) + "&" : "?") +
+      "_ts=" + Date.now();
+    const events = crmRequest(pendingPath, "get").events || [];
+    Logger.log("Outbound queue returned " + events.length + " event(s); test ticket: " +
+      (settings.testTicketId || "none"));
     for (const event of events) {
+      if (settings.testTicketId && event.ticket_id !== settings.testTicketId) {
+        Logger.log("Skipped outbound " + event.event_id + ": ticket " + event.ticket_id +
+          " is outside test scope");
+        continue;
+      }
+      if (settings.testRecipient &&
+          event.recipient_email.toLowerCase() !== settings.testRecipient.toLowerCase()) {
+        Logger.log("Skipped outbound " + event.event_id + ": recipient is outside test scope");
+        continue;
+      }
       if (MailApp.getRemainingDailyQuota() < 1) break;
       const marker = "outbound_" + event.event_id;
       const attemptsMarker = "attempts_" + event.event_id;
@@ -103,16 +124,13 @@ function processOutboundTicketEmails() {
           Number(properties.getProperty(attemptsMarker) || 0) >= 5) continue;
       try {
         if (!properties.getProperty(marker)) {
-          if (settings.testRecipient &&
-              event.recipient_email.toLowerCase() !== settings.testRecipient.toLowerCase()) {
-            throw new Error("Test recipient does not match CRM configuration");
-          }
           sendTicketEmail(event, settings);
           // Keep a local receipt when the CRM acknowledgement fails.
           properties.setProperty(marker, new Date().toISOString());
         }
         crmRequest("/api/outbound-email/google-apps-script/mark-sent", "post",
           { eventId: event.event_id, status: "Sent" });
+        Logger.log("Outbound " + event.event_id + " marked sent for ticket " + event.ticket_id);
         properties.deleteProperty(attemptsMarker);
       } catch (error) {
         Logger.log("Outbound " + event.event_id + ": " + error);

@@ -74,7 +74,7 @@ test("retries acknowledgement without sending the email again", () => {
     gmail_thread_id: null
   };
   const { context, sends } = harness((url) => {
-    if (url.endsWith("/pending")) return response(200, { events: [event] });
+    if (url.includes("/pending?_ts=")) return response(200, { events: [event] });
     if (url.endsWith("/mark-sent")) {
       acknowledgementCalls++;
       return response(acknowledgementCalls === 1 ? 500 : 200, { ok: true });
@@ -86,4 +86,28 @@ test("retries acknowledgement without sending the email again", () => {
   assert.equal(sends.length, 1);
   assert.equal(sends[0][0], "test@example.com");
   assert.equal(acknowledgementCalls, 2);
+});
+
+test("focused outbound test requests only its ticket and skips other events", () => {
+  const events = [
+    { event_id: "old", ticket_id: "TKT-OLD", recipient_email: "other@example.com",
+      subject: "Old", body_text: "Old", gmail_thread_id: null },
+    { event_id: "selected", ticket_id: "TKT-00223", recipient_email: "test@example.com",
+      subject: "Test", body_text: "Test", gmail_thread_id: null }
+  ];
+  const marked = [];
+  const { context, sends, values } = harness((url, options) => {
+    if (url.includes("/pending?")) {
+      assert.equal(new URL(url).searchParams.get("ticketId"), "TKT-00223");
+      assert.ok(new URL(url).searchParams.has("_ts"));
+      return response(200, { events });
+    }
+    if (url.endsWith("/mark-sent")) marked.push(JSON.parse(options.payload).eventId);
+    return response(200, { ok: true });
+  });
+  values.set("TEST_TICKET_ID", "TKT-00223");
+  context.processOutboundTicketEmails();
+  assert.equal(sends.length, 1);
+  assert.equal(sends[0][0], "test@example.com");
+  assert.deepEqual(marked, ["selected"]);
 });
