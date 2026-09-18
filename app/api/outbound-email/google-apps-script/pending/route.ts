@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 export async function GET(request: Request) {
   const rejected = verifyGoogleScriptRequest(request);
@@ -11,7 +12,9 @@ export async function GET(request: Request) {
   if (ticketId && (ticketId.length > 80 || !/^[A-Za-z0-9-]+$/.test(ticketId))) {
     return NextResponse.json({ error: "Invalid ticket ID" }, { status: 400 });
   }
-  const supabase = createSupabaseAdminClient();
+  // This queue changes after every acknowledgement; never reuse a cached
+  // Supabase GET even when the outer Apps Script request has a unique URL.
+  const supabase = createSupabaseAdminClient({ noStore: true });
   const fields = "event_id, ticket_id, recipient_email, subject, body_text, body_html, gmail_thread_id, notification_type";
   let pendingQuery = supabase.from("outbound_email_events")
     .select(fields).eq("provider", "google_apps_script").eq("status", "Pending");
