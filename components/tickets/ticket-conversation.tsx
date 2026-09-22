@@ -116,7 +116,7 @@ export function TicketConversation({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open ticket conversation"
-        className="fixed bottom-6 right-6 z-40 grid h-14 w-14 place-items-center rounded-full bg-payscribe-blue text-white shadow-xl transition hover:scale-105 hover:bg-[#254f93] focus:outline-none focus:ring-4 focus:ring-payscribe-blue/25"
+        className="fixed bottom-4 right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-payscribe-blue text-white shadow-xl transition hover:scale-105 hover:bg-[#254f93] focus:outline-none focus:ring-4 focus:ring-payscribe-blue/25 sm:bottom-6 sm:right-6"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
@@ -132,11 +132,11 @@ export function TicketConversation({
       {open ? (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/35" role="presentation">
           <button type="button" aria-label="Close conversation" className="absolute inset-0 h-full w-full cursor-default" onClick={() => setOpen(false)} />
-          <aside role="dialog" aria-modal="true" aria-label="Ticket conversation" className="relative flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-neutral-200 px-5 py-4">
-              <div>
+          <aside role="dialog" aria-modal="true" aria-label="Ticket conversation" className="relative flex h-dvh w-full flex-col bg-white shadow-2xl sm:h-full sm:max-w-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-neutral-200 px-4 py-4 sm:px-5">
+              <div className="min-w-0">
                 <h3 className="text-base font-semibold text-neutral-950">Ticket Conversation</h3>
-                <p className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
+                <p className="mt-1 flex flex-wrap items-center gap-2 break-all text-xs text-neutral-500">
                   {ticketId}
                   <span className={`h-2 w-2 rounded-full ${liveState === "live" ? "bg-emerald-500" : liveState === "reconnecting" ? "bg-amber-500" : "bg-neutral-400"}`} />
                   {liveState === "live" ? "Live" : liveState === "reconnecting" ? "Reconnecting" : "Connecting"}
@@ -147,7 +147,7 @@ export function TicketConversation({
               </button>
             </div>
 
-            <div className="flex-1 space-y-4 overflow-y-auto bg-neutral-50/70 px-4 py-5 sm:px-6">
+            <div className="flex-1 space-y-4 overflow-y-auto bg-neutral-50/70 px-3 py-4 sm:px-6 sm:py-5">
         {messages.length === 0 ? (
           <div className="rounded border border-dashed border-neutral-300 bg-white px-4 py-8 text-center text-sm text-neutral-500">
             No replies yet. Send the first message to the customer.
@@ -161,7 +161,7 @@ export function TicketConversation({
 
           return (
             <div key={message.note_id} className={`flex ${isCustomer ? "justify-start" : "justify-end"}`}>
-              <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[70%] ${
+              <div className={`max-w-[92%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[76%] ${
                 isCustomer
                   ? "rounded-bl-sm border border-neutral-200 bg-white text-neutral-800"
                   : "rounded-br-sm bg-payscribe-blue text-white"
@@ -193,7 +193,7 @@ export function TicketConversation({
                           )}
                         </a>
                       ) : null}
-                      <div className="flex items-center gap-2 px-3 py-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
                         <span className="min-w-0 flex-1 truncate font-semibold">{attachment.name}</span>
                         <span className="shrink-0 opacity-70">{attachmentSize(attachment.size)}</span>
                         {previewable ? <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="font-bold underline">View</a> : null}
@@ -209,7 +209,7 @@ export function TicketConversation({
         <div ref={endRef} />
             </div>
 
-            <div className="border-t border-neutral-200 bg-white px-5 pb-5">
+            <div className="border-t border-neutral-200 bg-white px-4 pb-4 sm:px-5 sm:pb-5">
         {canReply ? (
           <AddTicketNoteForm action={action} staffMembers={staffMembers} ticketId={ticketId} />
         ) : (

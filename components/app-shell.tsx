@@ -70,7 +70,7 @@ export function AppShell({
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur lg:px-8">
+        <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 px-3 py-3 backdrop-blur sm:px-4 lg:px-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
@@ -99,11 +99,15 @@ export function AppShell({
               </form>
             </div>
 
+            <div className="md:hidden">
+              <GlobalSearch />
+            </div>
+
             <AppNavigation items={visibleNavigation} variant="mobile" />
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1440px] px-4 py-6 lg:px-8">
+        <main className="mx-auto w-full max-w-[1440px] px-3 py-5 sm:px-4 sm:py-6 lg:px-8">
           {children}
         </main>
       </div>

@@ -165,7 +165,7 @@ export default async function AutomationsPage({
             </p>
             <form
               action={sendSlackDmTest}
-              className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"
+              className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]"
             >
               <select
                 required

@@ -23,7 +23,7 @@ export default async function UpdatePasswordPage({
           <p className="text-sm font-semibold uppercase tracking-wide">
             Payscribe CRM
           </p>
-          <h1 className="mt-6 max-w-xl text-5xl font-semibold tracking-normal">
+          <h1 className="mt-6 max-w-xl text-3xl font-semibold tracking-normal sm:text-4xl lg:text-5xl">
             Choose a new password.
           </h1>
         </div>

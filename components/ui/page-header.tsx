@@ -15,18 +15,18 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-4 border-b border-neutral-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-      <div>
+      <div className="min-w-0">
         <p className="text-sm font-semibold uppercase tracking-wide text-payscribe-blue">
           {eyebrow}
         </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-normal text-neutral-950">
+        <h2 className="mt-2 break-words text-2xl font-semibold tracking-normal text-neutral-950">
           {title}
         </h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+        <p className="mt-2 max-w-2xl break-words text-sm leading-6 text-neutral-600">
           {description}
         </p>
       </div>
-      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">{actions}</div> : null}
     </div>
   );
 }

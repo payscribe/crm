@@ -73,6 +73,18 @@ function isDueToday(ticket: Ticket) {
   );
 }
 
+function ticketSourceBadge(source: Ticket["source"] | null | undefined) {
+  if (source === "Widget") {
+    return { label: "Live Chat", tone: "green" as const };
+  }
+
+  if (source === "Email") {
+    return { label: "Email", tone: "blue" as const };
+  }
+
+  return { label: "CRM", tone: "slate" as const };
+}
+
 export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const { supabase, currentUser, permissions } = await getCurrentUserContext();
 
@@ -228,12 +240,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         ) : null}
 
         <div className="mt-6 rounded border border-neutral-200 bg-white p-4">
-          <form className="grid gap-3 lg:grid-cols-[1fr_170px_170px_190px_210px_150px_150px_auto]">
+          <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_170px_170px_190px_210px_150px_150px_auto]">
             <input
               name="q"
               defaultValue={query}
               placeholder="Search by ticket ID, subject, reporter, or description"
-              className="rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+              className="rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20 sm:col-span-2 lg:col-span-1"
             />
             <select
               name="priority"
@@ -298,15 +310,97 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
               aria-label="To date"
               className="rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
             />
-            <SubmitButton variant="dark" pendingText="Filtering...">
-              Filter
-            </SubmitButton>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <SubmitButton variant="dark" pendingText="Filtering...">
+                Filter
+              </SubmitButton>
+            </div>
           </form>
         </div>
 
         <div className="mt-6 overflow-hidden rounded border border-neutral-200 bg-white">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-neutral-200 text-sm">
+          <div className="divide-y divide-neutral-200 md:hidden">
+            {records.map((ticket) => {
+              const sourceBadge = ticketSourceBadge(ticket.source);
+
+              return (
+              <article key={ticket.ticket_id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/tickets/${ticket.ticket_id}`}
+                        className="break-words font-semibold text-payscribe-blue hover:underline"
+                      >
+                        {ticket.subject}
+                      </Link>
+                      <StatusBadge
+                        label={sourceBadge.label}
+                        tone={sourceBadge.tone}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {ticket.ticket_id} - {ticket.issue_category}
+                      {ticket.sub_category ? ` / ${ticket.sub_category}` : ""}
+                    </p>
+                  </div>
+                  <StatusBadge
+                    label={ticketStatusLabel(ticket.status)}
+                    tone={ticketStatusTone(ticket.status)}
+                  />
+                </div>
+
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Business</dt>
+                    <dd className="mt-1 break-words text-neutral-800">
+                      {ticket.business_id
+                        ? businessById.get(ticket.business_id) ?? ticket.business_id
+                        : "Unmatched email"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Priority</dt>
+                    <dd className="mt-1">
+                      <StatusBadge
+                        label={ticket.priority}
+                        tone={ticketPriorityTone(ticket.priority)}
+                      />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Assigned</dt>
+                    <dd className="mt-1 text-neutral-800">
+                      {ticket.assigned_to
+                        ? staffById.get(ticket.assigned_to) ?? "Unknown"
+                        : "Unassigned"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">SLA</dt>
+                    <dd className="mt-1 text-neutral-800">
+                      {formatDate(ticket.sla_deadline)}
+                      {isSlaBreached(ticket) ? (
+                        <span className="mt-1 block text-xs font-semibold text-red-700">
+                          Breached
+                        </span>
+                      ) : null}
+                    </dd>
+                  </div>
+                </dl>
+              </article>
+              );
+            })}
+
+            {records.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-neutral-500">
+                No tickets found.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="min-w-[920px] divide-y divide-neutral-200 text-sm">
               <thead className="bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 <tr>
                   <th className="px-4 py-3">Ticket</th>
@@ -319,15 +413,24 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
-                {records.map((ticket) => (
+                {records.map((ticket) => {
+                  const sourceBadge = ticketSourceBadge(ticket.source);
+
+                  return (
                   <tr key={ticket.ticket_id}>
                     <td className="px-4 py-4">
-                      <Link
-                        href={`/tickets/${ticket.ticket_id}`}
-                        className="font-semibold text-payscribe-blue hover:underline"
-                      >
-                        {ticket.subject}
-                      </Link>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/tickets/${ticket.ticket_id}`}
+                          className="font-semibold text-payscribe-blue hover:underline"
+                        >
+                          {ticket.subject}
+                        </Link>
+                        <StatusBadge
+                          label={sourceBadge.label}
+                          tone={sourceBadge.tone}
+                        />
+                      </div>
                       <div className="mt-1 text-xs text-neutral-500">
                         {ticket.ticket_id} - {ticket.issue_category}
                         {ticket.sub_category ? ` / ${ticket.sub_category}` : ""}
@@ -367,7 +470,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
                       ) : null}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
 
                 {records.length === 0 ? (
                   <EmptyTableRow colSpan={7} message="No tickets found." />

@@ -18,7 +18,7 @@ export default function ForgotPasswordPage({
           <p className="text-sm font-semibold uppercase tracking-wide">
             Payscribe CRM
           </p>
-          <h1 className="mt-6 max-w-xl text-5xl font-semibold tracking-normal">
+          <h1 className="mt-6 max-w-xl text-3xl font-semibold tracking-normal sm:text-4xl lg:text-5xl">
             Reset staff access securely.
           </h1>
         </div>

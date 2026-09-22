@@ -8,6 +8,7 @@
 const THREAD_PAGE_SIZE = 50;
 const MAX_THREAD_PAGES = 5;
 const MAX_MESSAGES_PER_RUN = 50;
+const CRM_MAX_ATTEMPTS = 3;
 
 function crmSettings() {
   const properties = PropertiesService.getScriptProperties();
@@ -28,19 +29,45 @@ function crmSettings() {
 
 function crmRequest(path, method, payload) {
   const settings = crmSettings();
-  const response = UrlFetchApp.fetch(settings.baseUrl + path, {
-    method,
-    contentType: "application/json",
-    headers: { Authorization: "Bearer " + settings.secret, "X-CRM-Mailbox": settings.mailbox,
-      "Cache-Control": "no-cache" },
-    payload: payload ? JSON.stringify(payload) : undefined,
-    muteHttpExceptions: true
-  });
-  const text = response.getContentText();
-  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
-    throw new Error(path + " returned " + response.getResponseCode() + ": " + text);
+  let lastError = null;
+  for (let attempt = 1; attempt <= CRM_MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = UrlFetchApp.fetch(settings.baseUrl + path, {
+        method,
+        contentType: "application/json",
+        headers: { Authorization: "Bearer " + settings.secret, "X-CRM-Mailbox": settings.mailbox,
+          "Cache-Control": "no-cache" },
+        payload: payload ? JSON.stringify(payload) : undefined,
+        muteHttpExceptions: true
+      });
+      const text = response.getContentText();
+      const status = response.getResponseCode();
+      if (status >= 200 && status < 300) {
+        return JSON.parse(text);
+      }
+      const error = new Error(path + " returned " + status + ": " + text);
+      if (status < 500 || attempt === CRM_MAX_ATTEMPTS) {
+        throw error;
+      }
+      lastError = error;
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableCrmError(error) || attempt === CRM_MAX_ATTEMPTS) {
+        throw error;
+      }
+    }
+    Utilities.sleep(1000 * attempt);
   }
-  return JSON.parse(text);
+  throw lastError;
+}
+
+function isRetryableCrmError(error) {
+  const message = String(error || "").toLowerCase();
+  return message.indexOf("address unavailable") >= 0 ||
+    message.indexOf("server error") >= 0 ||
+    message.indexOf("returned 5") >= 0 ||
+    message.indexOf("timed out") >= 0 ||
+    message.indexOf("dns") >= 0;
 }
 
 function withScriptLock(work) {

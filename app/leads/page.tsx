@@ -375,11 +375,13 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                   Next follow-up date
                 </span>
                 <input
-                  required
                   name="next_followup_date"
                   type="date"
                   className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
                 />
+                <span className="mt-1 block text-xs text-neutral-500">
+                  Required unless the lead is Closed Won or Closed Lost.
+                </span>
               </label>
 
               <label className="block xl:col-span-2">
@@ -389,6 +391,18 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 <input
                   name="last_message_summary"
                   maxLength={200}
+                  className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                />
+              </label>
+
+              <label className="block xl:col-span-3">
+                <span className="text-sm font-medium text-neutral-800">
+                  Lost reason
+                </span>
+                <textarea
+                  name="lost_reason"
+                  rows={2}
+                  placeholder="Required when status is Closed Lost"
                   className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
                 />
               </label>
@@ -436,12 +450,12 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         ) : null}
 
         <div className="mt-6 rounded border border-neutral-200 bg-white p-4">
-          <form className="grid gap-3 lg:grid-cols-[1fr_190px_190px_190px_190px_auto]">
+          <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_190px_190px_190px_190px_auto]">
             <input
               name="q"
               defaultValue={query}
               placeholder="Search by name, business, phone, email, or ID"
-              className="rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+              className="rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20 sm:col-span-2 lg:col-span-1"
             />
             <select
               name="stage"
@@ -491,9 +505,11 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 </option>
               ))}
             </select>
-            <SubmitButton variant="dark" pendingText="Filtering...">
-              Filter
-            </SubmitButton>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <SubmitButton variant="dark" pendingText="Filtering...">
+                Filter
+              </SubmitButton>
+            </div>
           </form>
         </div>
 

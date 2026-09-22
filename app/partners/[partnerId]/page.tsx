@@ -100,21 +100,21 @@ export default async function PartnerDetailPage({
     <AppShell currentUser={currentUser} permissions={permissions}>
       <section>
         <div className="flex flex-col gap-4 border-b border-neutral-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-wide text-payscribe-blue">
               {partner.partner_id}
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-normal text-neutral-950">
+            <h2 className="mt-2 break-words text-2xl font-semibold tracking-normal text-neutral-950">
               {partner.organisation_name}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+            <p className="mt-2 max-w-2xl break-words text-sm leading-6 text-neutral-600">
               {displayPartnerType(partner)} - Owned by{" "}
               {partner.payscribe_contact
                 ? staffById.get(partner.payscribe_contact) ?? "Unknown"
                 : "Unassigned"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <AddTaskButton
               entityType="Partner"
               entityId={partner.partner_id}
@@ -132,28 +132,28 @@ export default async function PartnerDetailPage({
         <StatusAlert type="error" message={searchParams?.error} />
         <StatusAlert type="success" message={searchParams?.success} />
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Status</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {partner.outreach_status}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Priority</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {partner.priority ?? "Not set"}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Last Contact</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {formatDate(partner.date_last_interaction)}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Next Review</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {formatDate(partner.next_review_date)}
             </p>
           </div>

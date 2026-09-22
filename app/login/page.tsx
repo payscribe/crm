@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="hidden min-h-screen flex-1 bg-payscribe-blue px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div>
           <PayscribeLogo className="h-12 w-auto" />
-          <h1 className="mt-8 max-w-xl text-5xl font-semibold tracking-normal">
+          <h1 className="mt-8 max-w-xl text-3xl font-semibold tracking-normal sm:text-4xl lg:text-5xl">
             Operations, growth, support, and partner work in one place.
           </h1>
         </div>

@@ -50,6 +50,7 @@ export type Lead = {
   next_followup_date: string;
   last_message_summary: string | null;
   notes: string | null;
+  lost_reason: string | null;
   converted: boolean;
   linked_business_id: string | null;
   needs_reassignment: boolean;

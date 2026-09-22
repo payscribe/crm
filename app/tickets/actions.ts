@@ -934,6 +934,7 @@ export async function addTicketNote(formData: FormData) {
   const { supabase, currentUser, permissions } = await getCurrentUserContext();
   const ticketId = optionalText(formData.get("ticket_id"));
   const noteBody = optionalText(formData.get("note_body"));
+  const isRealtimeChat = optionalText(formData.get("realtime_chat")) === "yes";
   const attachmentEntry = formData.get("attachment");
   const attachment =
     attachmentEntry instanceof File && attachmentEntry.size > 0
@@ -1147,7 +1148,7 @@ export async function addTicketNote(formData: FormData) {
   const recipientName =
     ticket.customer_name ?? businessCustomerName(businessContact);
 
-  if (recipientEmail && note?.note_id) {
+  if (!isRealtimeChat && recipientEmail && note?.note_id) {
     await queueTicketReplyEmail({
       agentName: currentUser.full_name,
       customerEmail: recipientEmail,
@@ -1161,7 +1162,7 @@ export async function addTicketNote(formData: FormData) {
     });
   }
 
-  if (optionalText(formData.get("realtime_chat")) === "yes") {
+  if (isRealtimeChat) {
     return;
   }
 

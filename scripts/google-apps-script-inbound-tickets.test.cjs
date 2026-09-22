@@ -34,6 +34,7 @@ function harness(fetch) {
     MailApp: { getRemainingDailyQuota: () => 100 },
     UrlFetchApp: { fetch: fetch },
     Logger: { log: () => {} },
+    Utilities: { sleep: () => {} },
     Date, JSON, String, Number
   };
   vm.runInNewContext(source, context);
@@ -68,16 +69,19 @@ test("does not import mail from before the configured start time", () => {
 
 test("retries acknowledgement without sending the email again", () => {
   let acknowledgementCalls = 0;
+  let acknowledged = false;
   const event = {
     event_id: "e-1", ticket_id: "T-1", recipient_email: "test@example.com",
     subject: "[CRM TEST] Ticket received: T-1", body_text: "Hello", body_html: "<p>Hello</p>",
     gmail_thread_id: null
   };
   const { context, sends } = harness((url) => {
-    if (url.includes("/pending?_ts=")) return response(200, { events: [event] });
+    if (url.includes("/pending?_ts=")) return response(200, { events: acknowledged ? [] : [event] });
     if (url.endsWith("/mark-sent")) {
       acknowledgementCalls++;
-      return response(acknowledgementCalls === 1 ? 500 : 200, { ok: true });
+      if (acknowledgementCalls === 1) return response(500, { ok: false });
+      acknowledged = true;
+      return response(200, { ok: true });
     }
     return response(200, {});
   });
@@ -110,4 +114,25 @@ test("focused outbound test requests only its ticket and skips other events", ()
   assert.equal(sends.length, 1);
   assert.equal(sends[0][0], "test@example.com");
   assert.deepEqual(marked, ["selected"]);
+});
+
+test("retries transient CRM fetch failures", () => {
+  let pendingCalls = 0;
+  const event = {
+    event_id: "retry-event", ticket_id: "T-1", recipient_email: "test@example.com",
+    subject: "Retry", body_text: "Retry", gmail_thread_id: null
+  };
+  const { context, sends } = harness((url) => {
+    if (url.includes("/pending?_ts=")) {
+      pendingCalls++;
+      if (pendingCalls === 1) {
+        throw new Error("Exception: Address unavailable: " + url);
+      }
+      return response(200, { events: [event] });
+    }
+    return response(200, { ok: true });
+  });
+  context.processOutboundTicketEmails();
+  assert.equal(pendingCalls, 2);
+  assert.equal(sends.length, 1);
 });

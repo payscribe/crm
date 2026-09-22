@@ -83,7 +83,7 @@ export function FormModal({
             aria-modal="true"
             aria-labelledby={titleId}
             aria-describedby={description ? descriptionId : undefined}
-            className={`relative max-h-[92vh] w-full overflow-y-auto rounded-t border border-neutral-200 bg-white shadow-xl sm:rounded ${
+            className={`relative max-h-[96dvh] w-full overflow-y-auto rounded-t border border-neutral-200 bg-white shadow-xl sm:max-h-[92vh] sm:rounded ${
               size === "wide" ? "sm:max-w-5xl" : "sm:max-w-2xl"
             }`}
           >
@@ -109,7 +109,7 @@ export function FormModal({
                 Close
               </button>
             </div>
-            <div className="p-5">{children}</div>
+            <div className="p-4 sm:p-5">{children}</div>
           </section>
         </div>
       ) : null}

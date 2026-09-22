@@ -44,7 +44,7 @@ export function SubmitButton({
       type="submit"
       disabled={isDisabled}
       aria-disabled={isDisabled}
-      className={`inline-flex items-center justify-center gap-2 rounded font-semibold transition disabled:cursor-not-allowed disabled:opacity-70 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex w-full items-center justify-center gap-2 rounded font-semibold transition disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto ${variants[variant]} ${sizes[size]} ${className}`}
     >
       {pending ? (
         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />

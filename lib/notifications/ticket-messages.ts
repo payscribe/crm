@@ -1,8 +1,18 @@
 type SlackFieldValue = string | number | null | undefined;
 
-function cleanValue(value: SlackFieldValue) {
+const DEFAULT_SLACK_VALUE_LIMIT = 700;
+
+function cleanValue(value: SlackFieldValue, maxLength = DEFAULT_SLACK_VALUE_LIMIT) {
   const text = String(value ?? "Not set").trim();
-  return text.length > 0 ? text.replace(/```/g, "'''") : "Not set";
+  const cleaned = text.length > 0
+    ? text.replace(/```/g, "'''").replace(/\n{3,}/g, "\n\n")
+    : "Not set";
+
+  if (cleaned.length <= maxLength) {
+    return cleaned;
+  }
+
+  return `${cleaned.slice(0, maxLength - 3).trim()}...`;
 }
 
 export function formatDateForSlack(dateString: SlackFieldValue) {
@@ -35,15 +45,11 @@ export function slackFieldTable(
   title: string,
   fields: Array<[label: string, value: SlackFieldValue]>
 ) {
-  const labelWidth = Math.max(
-    14,
-    ...fields.map(([label]) => label.length)
-  );
   const rows = fields
-    .map(([label, value]) => `${label.padEnd(labelWidth)}  ${cleanValue(value)}`)
+    .map(([label, value]) => `• *${label}:* ${cleanValue(value)}`)
     .join("\n");
 
-  return `*${title}*\n\`\`\`\n${rows}\n\`\`\``;
+  return `*${title}*\n${rows}`;
 }
 
 export function slackUserMention(slackUserId: string | null | undefined) {

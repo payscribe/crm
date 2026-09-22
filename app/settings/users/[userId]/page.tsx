@@ -43,18 +43,18 @@ export default async function StaffProfilePage({
     <AppShell currentUser={currentUser} permissions={permissions}>
       <section>
         <div className="flex flex-col gap-4 border-b border-neutral-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-wide text-payscribe-blue">
               Settings
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-normal text-neutral-950">
+            <h2 className="mt-2 break-words text-2xl font-semibold tracking-normal text-neutral-950">
               Edit Staff Profile
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+            <p className="mt-2 max-w-2xl break-words text-sm leading-6 text-neutral-600">
               Update display details and account status for {staffMember.full_name}.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Link
               href={`/settings/users/${staffMember.user_id}/permissions`}
               className="rounded bg-payscribe-blue px-4 py-2 text-sm font-semibold text-white"
@@ -76,19 +76,19 @@ export default async function StaffProfilePage({
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Status</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {staffMember.status}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Created</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {formatDate(staffMember.created_at)}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Last login</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {formatDate(staffMember.last_login_at)}
             </p>
           </div>

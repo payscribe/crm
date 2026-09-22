@@ -90,14 +90,14 @@ export default async function ProductEventDetailPage({
     <AppShell currentUser={currentUser} permissions={permissions}>
       <section>
         <div className="flex flex-col gap-4 border-b border-neutral-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-wide text-payscribe-blue">
               {productEvent.event_id}
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-normal text-neutral-950">
+            <h2 className="mt-2 break-words text-2xl font-semibold tracking-normal text-neutral-950">
               {productEvent.title}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+            <p className="mt-2 max-w-2xl break-words text-sm leading-6 text-neutral-600">
               {productEvent.event_type} - Posted by{" "}
               {staffById.get(productEvent.posted_by) ?? "Unknown"}
             </p>
@@ -113,28 +113,28 @@ export default async function ProductEventDetailPage({
         <StatusAlert type="error" message={searchParams?.error} />
         <StatusAlert type="success" message={searchParams?.success} />
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Status</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {productEvent.status}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Severity</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {productEvent.severity ?? "Not set"}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Created</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {formatDate(productEvent.created_at)}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Resolved</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {productEvent.resolved_at
                 ? `${formatDate(productEvent.resolved_at)} (${productEvent.resolution_time_hours ?? "?"}h)`
                 : "Not resolved"}

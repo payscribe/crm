@@ -30,6 +30,17 @@ textarea {
   font: inherit;
 }
 
+input,
+select,
+textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.overflow-x-auto > table {
+  min-width: 760px;
+}
+
 .ticket-rich-text-editor:empty::before {
   color: #a3a3a3;
   content: attr(data-placeholder);

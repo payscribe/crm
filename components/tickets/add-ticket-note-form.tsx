@@ -160,12 +160,12 @@ export function AddTicketNoteForm({
         />
       </label>
 
-      <div className="mt-3">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 transition hover:border-payscribe-blue hover:text-payscribe-blue">
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="inline-flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 transition hover:border-payscribe-blue hover:text-payscribe-blue">
           <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round">
             <path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l10-10a4 4 0 0 1 5.7 5.7l-10 10a2 2 0 1 1-2.8-2.8l9.3-9.3" />
           </svg>
-          {attachmentName || "Add attachment"}
+          <span className="min-w-0 truncate">{attachmentName || "Add attachment"}</span>
           <input
             ref={fileRef}
             className="sr-only"
@@ -176,7 +176,7 @@ export function AddTicketNoteForm({
           />
         </label>
         {attachmentName ? (
-          <button type="button" className="ml-2 text-xs font-semibold text-red-600" onClick={() => {
+          <button type="button" className="self-start text-xs font-semibold text-red-600 sm:self-auto" onClick={() => {
             setAttachmentName("");
             if (fileRef.current) fileRef.current.value = "";
           }}>Remove</button>
@@ -230,7 +230,7 @@ export function AddTicketNoteForm({
         This reply will be visible in the customer&apos;s support widget. Attach one file up to 5 MB. Type @ to notify a teammate.
       </span>
 
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex sm:justify-end">
         <SubmitButton pendingText="Sending reply...">Send Reply</SubmitButton>
       </div>
     </form>

@@ -458,7 +458,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
         <form className="mt-6 rounded border border-neutral-200 bg-white p-4">
           <input type="hidden" name="tab" value={activeTab} />
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
             <label className="block">
               <span className="text-sm font-medium text-neutral-800">
                 From
@@ -503,7 +503,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
         <TabNavigation activeTab={activeTab} tabs={tabs} />
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex sm:justify-end">
           <Link
             href={`/reports/export?${new URLSearchParams({
               ...Object.fromEntries(activeDateParams),

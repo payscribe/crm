@@ -78,7 +78,7 @@ function AddOptionForm({ group, parentLabel }: Pick<OptionSection, "group" | "pa
   return (
     <form
       action={createManagedOption}
-      className="mt-4 grid gap-3 rounded border border-neutral-200 bg-neutral-50 p-4 md:grid-cols-[1fr_120px_auto]"
+      className="mt-4 grid gap-3 rounded border border-neutral-200 bg-neutral-50 p-4 sm:grid-cols-[1fr_120px] lg:grid-cols-[1fr_120px_auto]"
     >
       <input type="hidden" name="option_group" value={group} />
       {parentLabel ? (

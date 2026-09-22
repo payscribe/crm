@@ -24,7 +24,7 @@ const EXAMPLE_ROW = [
   "john@acme.com",
   "Referral",
   "Jane Smith",
-  "USD Virtual Card",
+  "USD Virtual Card; Airtime",
   "New",
   "Warm",
   "Medium",

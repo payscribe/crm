@@ -138,19 +138,19 @@ export default async function LeadDetailPage({
     <AppShell currentUser={currentUser} permissions={permissions}>
       <section>
         <div className="flex flex-col gap-4 border-b border-neutral-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-wide text-payscribe-blue">
               {lead.lead_id}
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-normal text-neutral-950">
+            <h2 className="mt-2 break-words text-2xl font-semibold tracking-normal text-neutral-950">
               {lead.full_name}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+            <p className="mt-2 max-w-2xl break-words text-sm leading-6 text-neutral-600">
               {lead.business_name ?? "No business name"} · Assigned to{" "}
               {staffById.get(lead.assigned_to) ?? "Unknown"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <AddTaskButton
               entityType="Lead"
               entityId={lead.lead_id}
@@ -197,7 +197,7 @@ export default async function LeadDetailPage({
             <p className="text-sm font-medium text-neutral-500">
               Last contact
             </p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {lead.last_contact_date
                 ? formatDate(lead.last_contact_date)
                 : "Never contacted"}
@@ -207,10 +207,20 @@ export default async function LeadDetailPage({
             <p className="text-sm font-medium text-neutral-500">
               Next follow-up
             </p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {formatDate(lead.next_followup_date)}
             </p>
           </div>
+          {lead.status === "Closed Lost" ? (
+            <div className="rounded border border-neutral-200 bg-white p-5 xl:col-span-2">
+              <p className="text-sm font-medium text-neutral-500">
+                Lost reason
+              </p>
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-neutral-800">
+                {lead.lost_reason ?? "No reason recorded"}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {lead.linked_business_id ? (
@@ -427,13 +437,15 @@ export default async function LeadDetailPage({
                 Next follow-up date
               </span>
               <input
-                required
                 disabled={disabled}
                 name="next_followup_date"
                 type="date"
                 defaultValue={lead.next_followup_date}
                 className={inputClass}
               />
+              <span className="mt-1 block text-xs text-neutral-500">
+                Required unless the lead is Closed Won or Closed Lost.
+              </span>
             </label>
 
             <label className="block xl:col-span-2">
@@ -446,6 +458,20 @@ export default async function LeadDetailPage({
                 maxLength={200}
                 defaultValue={lead.last_message_summary ?? ""}
                 className={inputClass}
+              />
+            </label>
+
+            <label className="block xl:col-span-3">
+              <span className="text-sm font-medium text-neutral-800">
+                Lost reason
+              </span>
+              <textarea
+                disabled={disabled}
+                name="lost_reason"
+                rows={3}
+                defaultValue={lead.lost_reason ?? ""}
+                placeholder="Required when status is Closed Lost"
+                className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20 disabled:bg-neutral-100 disabled:text-neutral-500"
               />
             </label>
           </div>

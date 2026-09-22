@@ -151,14 +151,14 @@ export default async function TicketDetailPage({
     <AppShell currentUser={currentUser} permissions={permissions}>
       <section>
         <div className="flex flex-col gap-4 border-b border-neutral-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-wide text-payscribe-blue">
               {ticket.ticket_id}
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-normal text-neutral-950">
+            <h2 className="mt-2 break-words text-2xl font-semibold tracking-normal text-neutral-950">
               {ticket.subject}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+            <p className="mt-2 max-w-2xl break-words text-sm leading-6 text-neutral-600">
               {ticket.business_id
                 ? businessById.get(ticket.business_id) ?? ticket.business_id
                 : "Unmatched email"}{" "}
@@ -169,7 +169,7 @@ export default async function TicketDetailPage({
                 : "Unassigned"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <AddTaskButton
               entityType="Ticket"
               entityId={ticket.ticket_id}
@@ -202,7 +202,7 @@ export default async function TicketDetailPage({
         <StatusAlert type="error" message={searchParams?.error} />
         <StatusAlert type="success" message={searchParams?.success} />
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Priority</p>
             <div className="mt-3">
@@ -225,14 +225,14 @@ export default async function TicketDetailPage({
             <p className="text-sm font-medium text-neutral-500">
               SLA deadline
             </p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {formatDate(ticket.sla_deadline)}
             </p>
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">SLA state</p>
             <p
-              className={`mt-2 text-xl font-semibold ${
+              className={`mt-2 break-words text-lg font-semibold md:text-xl ${
                 isSlaBreached(ticket) ? "text-red-700" : "text-neutral-950"
               }`}
             >
@@ -241,7 +241,7 @@ export default async function TicketDetailPage({
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">Created</p>
-            <p className="mt-2 text-xl font-semibold text-neutral-950">
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
               {formatDate(ticket.created_at)}
             </p>
           </div>
@@ -263,7 +263,7 @@ export default async function TicketDetailPage({
         {ticket.source === "Email" ? (
           <div className="mt-6 rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
             <div className="font-semibold">Email ticket</div>
-            <div className="mt-1">
+            <div className="mt-1 break-words">
               Sender: {ticket.customer_name ?? "Unknown"}{" "}
               {ticket.customer_email ? `<${ticket.customer_email}>` : ""}
             </div>
@@ -303,7 +303,7 @@ export default async function TicketDetailPage({
             </h3>
           </div>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <label className="block">
               <span className="text-sm font-medium text-neutral-800">
                 Business
@@ -510,7 +510,7 @@ export default async function TicketDetailPage({
               </select>
             </label>
 
-            <label className="block md:col-span-2">
+            <label className="block sm:col-span-2">
               <span className="text-sm font-medium text-neutral-800">
                 Subject
               </span>
@@ -551,7 +551,7 @@ export default async function TicketDetailPage({
           </label>
 
           {canEdit && ticket.status !== "Closed" ? (
-            <div className="mt-5 flex justify-end">
+            <div className="mt-5 flex sm:justify-end">
               <SubmitButton pendingText="Updating ticket...">
                 Update Ticket
               </SubmitButton>

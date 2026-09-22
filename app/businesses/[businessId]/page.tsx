@@ -114,19 +114,19 @@ export default async function BusinessDetailPage({
 		<AppShell currentUser={currentUser} permissions={permissions}>
 			<section>
 				<div className='flex flex-col gap-4 border-b border-neutral-200 pb-5 lg:flex-row lg:items-end lg:justify-between'>
-					<div>
+					<div className='min-w-0'>
 						<p className='text-sm font-semibold uppercase tracking-wide text-payscribe-blue'>
 							{business.business_id}
 						</p>
-						<h2 className='mt-2 text-2xl font-semibold tracking-normal text-neutral-950'>
+						<h2 className='mt-2 break-words text-2xl font-semibold tracking-normal text-neutral-950'>
 							{business.business_name}
 						</h2>
-						<p className='mt-2 max-w-2xl text-sm leading-6 text-neutral-600'>
+						<p className='mt-2 max-w-2xl break-words text-sm leading-6 text-neutral-600'>
 							Read-only business profile from the platform data source, with CRM
 							ticket and lead history.
 						</p>
 					</div>
-					<div className='flex flex-wrap gap-2'>
+					<div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap'>
 						<AddTaskButton
 							entityType='Business'
 							entityId={business.business_id}

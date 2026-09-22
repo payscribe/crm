@@ -33,6 +33,14 @@ function requiredText(formData: FormData, key: string) {
   return optionalText(formData.get(key));
 }
 
+function isClosedLeadStatus(status: string) {
+  return status === "Closed Won" || status === "Closed Lost";
+}
+
+function fallbackTodayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 type LeadThreadInfo = {
   lead_id: string;
   full_name: string;
@@ -280,9 +288,14 @@ export async function createLead(formData: FormData) {
   const assignedTo = requiredText(formData, "assigned_to");
   const nextFollowupDate = requiredText(formData, "next_followup_date");
   const referralSourceName = optionalText(formData.get("referral_source_name"));
+  const lostReason = optionalText(formData.get("lost_reason"));
 
-  if (!fullName || !phone || !source || !assignedTo || !nextFollowupDate) {
-    redirect("/leads?error=Name,%20phone,%20source,%20assignee,%20and%20follow-up%20date%20are%20required");
+  if (!fullName || !phone || !source || !assignedTo) {
+    redirect("/leads?error=Name,%20phone,%20source,%20and%20assignee%20are%20required");
+  }
+
+  if (!isClosedLeadStatus(status) && !nextFollowupDate) {
+    redirect("/leads?error=Follow-up%20date%20is%20required%20for%20active%20leads");
   }
 
   if (!leadSources.includes(source as never)) {
@@ -299,6 +312,10 @@ export async function createLead(formData: FormData) {
 
   if (!leadStatuses.includes(status as never)) {
     redirect("/leads?error=Invalid%20lead%20status");
+  }
+
+  if (status === "Closed Lost" && !lostReason) {
+    redirect("/leads?error=Lost%20reason%20is%20required%20when%20closing%20a%20lead%20as%20lost");
   }
 
   if (!leadPriorities.includes(priority as never)) {
@@ -335,9 +352,10 @@ export async function createLead(formData: FormData) {
       status,
       priority,
       assigned_to: assignedTo,
-      next_followup_date: nextFollowupDate,
+      next_followup_date: nextFollowupDate ?? fallbackTodayDate(),
       last_message_summary: lastMessageSummary,
-      notes: optionalText(formData.get("notes"))
+      notes: optionalText(formData.get("notes")),
+      lost_reason: status === "Closed Lost" ? lostReason : null
     })
     .select("lead_id")
     .single<{ lead_id: string }>();
@@ -394,7 +412,8 @@ async function validateLeadForm(
   supabase: Awaited<ReturnType<typeof getCurrentUserContext>>["supabase"],
   formData: FormData,
   redirectPath: string,
-  existingProductInterest: string[] = []
+  existingProductInterest: string[] = [],
+  existingNextFollowupDate?: string
 ) {
   const fullName = requiredText(formData, "full_name");
   const phone = requiredText(formData, "phone");
@@ -405,9 +424,14 @@ async function validateLeadForm(
   const assignedTo = requiredText(formData, "assigned_to");
   const nextFollowupDate = requiredText(formData, "next_followup_date");
   const referralSourceName = optionalText(formData.get("referral_source_name"));
+  const lostReason = optionalText(formData.get("lost_reason"));
 
-  if (!fullName || !phone || !source || !assignedTo || !nextFollowupDate) {
-    redirect(`${redirectPath}?error=Name,%20phone,%20source,%20assignee,%20and%20follow-up%20date%20are%20required`);
+  if (!fullName || !phone || !source || !assignedTo) {
+    redirect(`${redirectPath}?error=Name,%20phone,%20source,%20and%20assignee%20are%20required`);
+  }
+
+  if (!isClosedLeadStatus(status) && !nextFollowupDate) {
+    redirect(`${redirectPath}?error=Follow-up%20date%20is%20required%20for%20active%20leads`);
   }
 
   if (!leadSources.includes(source as never)) {
@@ -424,6 +448,10 @@ async function validateLeadForm(
 
   if (!leadStatuses.includes(status as never)) {
     redirect(`${redirectPath}?error=Invalid%20lead%20status`);
+  }
+
+  if (status === "Closed Lost" && !lostReason) {
+    redirect(`${redirectPath}?error=Lost%20reason%20is%20required%20when%20closing%20a%20lead%20as%20lost`);
   }
 
   if (!leadPriorities.includes(priority as never)) {
@@ -458,10 +486,11 @@ async function validateLeadForm(
     status,
     priority,
     assignedTo,
-    nextFollowupDate,
+    nextFollowupDate: nextFollowupDate ?? existingNextFollowupDate ?? fallbackTodayDate(),
     referralSourceName,
     productInterest,
-    lastMessageSummary
+    lastMessageSummary,
+    lostReason
   };
 }
 
@@ -479,7 +508,7 @@ export async function updateLead(formData: FormData) {
 
   const { data: previousLead } = await supabase
     .from("leads")
-    .select("notes, assigned_to, stage, status, product_interest")
+    .select("notes, assigned_to, stage, status, product_interest, next_followup_date")
     .eq("lead_id", leadId)
     .maybeSingle<{
       notes: string | null;
@@ -487,12 +516,14 @@ export async function updateLead(formData: FormData) {
       stage: string;
       status: string;
       product_interest: string[];
+      next_followup_date: string;
     }>();
   const values = await validateLeadForm(
     supabase,
     formData,
     `/leads/${leadId}`,
-    previousLead?.product_interest ?? []
+    previousLead?.product_interest ?? [],
+    previousLead?.next_followup_date
   );
   const nextNotes = optionalText(formData.get("notes"));
 
@@ -512,7 +543,8 @@ export async function updateLead(formData: FormData) {
       assigned_to: values.assignedTo,
       next_followup_date: values.nextFollowupDate,
       last_message_summary: values.lastMessageSummary,
-      notes: nextNotes
+      notes: nextNotes,
+      lost_reason: values.status === "Closed Lost" ? values.lostReason : null
     })
     .eq("lead_id", leadId);
 
@@ -664,6 +696,7 @@ export async function updateLeadStageAndStatus(formData: FormData) {
   const leadId = optionalText(formData.get("lead_id"));
   const stage = optionalText(formData.get("stage"));
   const status = optionalText(formData.get("status"));
+  const lostReason = optionalText(formData.get("lost_reason"));
   const returnTo = optionalText(formData.get("return_to")) ?? "/leads";
 
   if (!leadId || !stage || !status) {
@@ -682,6 +715,10 @@ export async function updateLeadStageAndStatus(formData: FormData) {
     redirect(`${returnTo}?error=Invalid%20lead%20status`);
   }
 
+  if (status === "Closed Lost" && !lostReason) {
+    redirect(`${returnTo}?error=Lost%20reason%20is%20required%20when%20closing%20a%20lead%20as%20lost`);
+  }
+
   const { data: previousLead } = await supabase
     .from("leads")
     .select("stage, status, assigned_to, full_name")
@@ -698,7 +735,8 @@ export async function updateLeadStageAndStatus(formData: FormData) {
     .update({
       stage,
       status,
-      converted: status === "Closed Won" || stage === "Converted"
+      converted: status === "Closed Won" || stage === "Converted",
+      lost_reason: status === "Closed Lost" ? lostReason : null
     })
     .eq("lead_id", leadId);
 
@@ -717,7 +755,8 @@ export async function updateLeadStageAndStatus(formData: FormData) {
       ["Lead ID", leadId],
       ["Changed by", currentUser.full_name],
       ["Previous", previousState],
-      ["Current", nextState]
+      ["Current", nextState],
+      ...(status === "Closed Lost" ? [["Lost reason", lostReason ?? "Not recorded"] as [string, string]] : [])
     ]);
 
     await postLeadSlackThreadReply({
@@ -739,7 +778,8 @@ export async function updateLeadStageAndStatus(formData: FormData) {
         ["Lead name", previousLead?.full_name ?? "Unknown lead"],
         ["Updated by", currentUser.full_name],
         ["Previous", previousState],
-        ["Current", nextState]
+        ["Current", nextState],
+        ...(status === "Closed Lost" ? [["Lost reason", lostReason ?? "Not recorded"] as [string, string]] : [])
       ])
     });
   } catch {
@@ -853,7 +893,7 @@ export async function linkLeadToBusiness(formData: FormData) {
 }
 
 export async function bulkUploadLeads(formData: FormData) {
-  const { currentUser, permissions } = await getCurrentUserContext();
+  const { supabase, currentUser, permissions } = await getCurrentUserContext();
 
   if (!hasModulePermission(currentUser, permissions, "Leads", "can_create")) {
     redirect("/leads?error=You%20do%20not%20have%20permission%20to%20create%20leads");
@@ -875,23 +915,42 @@ export async function bulkUploadLeads(formData: FormData) {
   const headerMap = headers.map(normalizeHeader);
   const records = [];
   let skipped = 0;
+  const skipReasons: Record<string, number> = {};
 
-  // Pre-resolve all unique staff emails in one query
+  const skipRow = (reason: string) => {
+    skipped += 1;
+    skipReasons[reason] = (skipReasons[reason] ?? 0) + 1;
+  };
+
   const supabaseAdmin = createSupabaseAdminClient();
   const rawEmails = bodyRows
     .map((row) => row[headerMap.indexOf("assigned_to_email")]?.trim().toLowerCase())
     .filter(Boolean) as string[];
   const uniqueEmails = [...new Set(rawEmails)];
+  const activeProductInterests = await getLeadProductInterestOptions(supabase);
+  const productInterestByLowercase = new Map(
+    activeProductInterests.map((productInterest) => [
+      productInterest.toLowerCase(),
+      productInterest
+    ])
+  );
 
   let staffEmailMap: Record<string, string> = {};
   if (uniqueEmails.length > 0) {
     const { data: staffRows } = await supabaseAdmin
       .from("users")
       .select("user_id, email")
-      .in("email", uniqueEmails)
+      .eq("status", "Active")
       .returns<Array<{ user_id: string; email: string }>>();
     staffEmailMap = Object.fromEntries(
-      (staffRows ?? []).map((s) => [s.email.toLowerCase(), s.user_id])
+      (staffRows ?? [])
+        .filter((staffMember) =>
+          uniqueEmails.includes(staffMember.email.toLowerCase())
+        )
+        .map((staffMember) => [
+          staffMember.email.toLowerCase(),
+          staffMember.user_id
+        ])
     );
   }
 
@@ -901,27 +960,60 @@ export async function bulkUploadLeads(formData: FormData) {
     const phone = get("phone");
 
     if (!fullName || !phone) {
-      skipped += 1;
+      skipRow("missing name or phone");
       continue;
     }
 
     const assignedToEmail = get("assigned_to_email")?.toLowerCase() ?? null;
     const assignedTo = assignedToEmail ? (staffEmailMap[assignedToEmail] ?? null) : null;
+    if (!assignedTo) {
+      skipRow("missing or unknown assigned_to_email");
+      continue;
+    }
 
     const stage = leadStages.includes(get("stage") as LeadStage)
       ? (get("stage") as LeadStage)
       : "New";
     const status = leadStatuses.includes(get("status") as LeadStatus)
       ? (get("status") as LeadStatus)
-      : "Cold";
+      : "Warm";
     const priority = leadPriorities.includes(get("priority") as never)
       ? get("priority")
       : "Medium";
     const source = leadSources.includes(get("source") as typeof leadSources[number])
       ? (get("source") as typeof leadSources[number])
       : null;
+    if (!source) {
+      skipRow("missing or invalid source");
+      continue;
+    }
 
     const nextFollowupDate = get("next_followup_date") ?? null;
+    if (!isValidDateInput(nextFollowupDate)) {
+      skipRow("missing or invalid next_followup_date");
+      continue;
+    }
+
+    const referralSourceName = get("referral_source_name");
+    if (source === "Referral" && !referralSourceName) {
+      skipRow("referral source name required");
+      continue;
+    }
+
+    const productInterest = parseProductInterestList(
+      get("product_interest"),
+      productInterestByLowercase
+    );
+    if (productInterest.length === 0) {
+      skipRow("missing or invalid product_interest");
+      continue;
+    }
+
+    const lastMessageSummary = get("last_message_summary");
+    if (lastMessageSummary && lastMessageSummary.length > 200) {
+      skipRow("last_message_summary over 200 characters");
+      continue;
+    }
 
     records.push({
       full_name: fullName,
@@ -929,20 +1021,25 @@ export async function bulkUploadLeads(formData: FormData) {
       phone,
       email: get("email")?.toLowerCase() ?? null,
       source,
-      referral_source_name: get("referral_source_name"),
-      product_interest: get("product_interest"),
+      referral_source_name: referralSourceName,
+      product_interest: productInterest,
       stage,
       status,
       priority,
       assigned_to: assignedTo,
       next_followup_date: nextFollowupDate,
-      last_message_summary: get("last_message_summary"),
+      last_message_summary: lastMessageSummary,
       notes: get("notes")
     });
   }
 
   if (records.length === 0) {
-    redirect("/leads?error=No%20valid%20lead%20rows%20found%20(full_name%20and%20phone%20are%20required)");
+    const details = formatSkipReasons(skipReasons);
+    redirect(
+      `/leads?error=${encodeURIComponent(
+        `No valid lead rows found. ${details || "Check required fields and try again."}`
+      )}`
+    );
   }
 
   const { error } = await supabaseAdmin.from("leads").insert(records);
@@ -954,8 +1051,11 @@ export async function bulkUploadLeads(formData: FormData) {
   revalidatePath("/leads");
   revalidatePath("/leads/pipeline");
   revalidatePath("/leads/attention");
+  const details = formatSkipReasons(skipReasons);
   redirect(
-    `/leads?success=${records.length}%20lead(s)%20imported,%20${skipped}%20skipped`
+    `/leads?success=${encodeURIComponent(
+      `${records.length} lead(s) imported, ${skipped} skipped${details ? ` (${details})` : ""}`
+    )}`
   );
 }
 
@@ -1001,7 +1101,42 @@ function parseCsv(text: string) {
 }
 
 function normalizeHeader(header: string) {
-  return header.trim().toLowerCase().replace(/\s+/g, "_");
+  return header.replace(/^\uFEFF/, "").trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+function isValidDateInput(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function parseProductInterestList(
+  value: string | null,
+  productInterestByLowercase: Map<string, string>
+) {
+  if (!value) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .split(/[;|]/)
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+        .map((item) => productInterestByLowercase.get(item))
+        .filter((item): item is string => Boolean(item))
+    )
+  );
+}
+
+function formatSkipReasons(skipReasons: Record<string, number>) {
+  return Object.entries(skipReasons)
+    .map(([reason, count]) => `${count} ${reason}`)
+    .join("; ");
 }
 
 export async function deleteLead(formData: FormData) {
