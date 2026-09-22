@@ -19,5 +19,6 @@ Get-Process -Name node | Where-Object {
 } | Stop-Process -Force
 
 Remove-Item -LiteralPath ".next" -Recurse -Force
+Remove-Item -LiteralPath ".next-dev" -Recurse -Force
 
 npm run dev

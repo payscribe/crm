@@ -18,6 +18,13 @@ type LeadPipelinePageProps = {
   };
 };
 
+function isClosedLead(lead: Lead) {
+  return (
+    ["Closed Won", "Closed Lost"].includes(lead.status) ||
+    ["Converted", "Closed Lost"].includes(lead.stage)
+  );
+}
+
 export default async function LeadPipelinePage({
   searchParams
 }: LeadPipelinePageProps) {
@@ -122,7 +129,9 @@ export default async function LeadPipelinePage({
                         <div className="flex justify-between gap-3">
                           <dt>Follow-up</dt>
                           <dd className="font-medium text-neutral-800">
-                            {formatDate(lead.next_followup_date)}
+                            {isClosedLead(lead)
+                              ? "Closed"
+                              : formatDate(lead.next_followup_date)}
                           </dd>
                         </div>
                       </dl>

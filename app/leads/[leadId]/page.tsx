@@ -41,6 +41,13 @@ type LeadDetailPageProps = {
   };
 };
 
+function isClosedLead(lead: Lead) {
+  return (
+    ["Closed Won", "Closed Lost"].includes(lead.status) ||
+    ["Converted", "Closed Lost"].includes(lead.stage)
+  );
+}
+
 export default async function LeadDetailPage({
   params,
   searchParams
@@ -126,6 +133,7 @@ export default async function LeadDetailPage({
   );
   const activityEntries = await fetchActivityFeed(supabase, "Lead", lead.lead_id);
   const disabled = !canEdit;
+  const closedLead = isClosedLead(lead);
   const linkedBusiness = (businesses ?? []).find(
     (business) => business.business_id === lead.linked_business_id
   );
@@ -208,7 +216,7 @@ export default async function LeadDetailPage({
               Next follow-up
             </p>
             <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
-              {formatDate(lead.next_followup_date)}
+              {closedLead ? "Closed" : formatDate(lead.next_followup_date)}
             </p>
           </div>
           {lead.status === "Closed Lost" ? (

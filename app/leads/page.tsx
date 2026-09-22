@@ -46,6 +46,13 @@ function isOverdue(date: string) {
   return new Date(date).getTime() < today.getTime();
 }
 
+function isClosedLead(lead: Lead) {
+  return (
+    ["Closed Won", "Closed Lost"].includes(lead.status) ||
+    ["Converted", "Closed Lost"].includes(lead.stage)
+  );
+}
+
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const { supabase, currentUser, permissions } = await getCurrentUserContext();
 
@@ -134,9 +141,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   );
   const onboardingLeads = records.filter((lead) => lead.stage === "Onboarding");
   const overdueLeads = records.filter(
-    (lead) =>
-      !["Closed Won", "Closed Lost"].includes(lead.status) &&
-      isOverdue(lead.next_followup_date)
+    (lead) => !isClosedLead(lead) && isOverdue(lead.next_followup_date)
   );
 
   return (
@@ -586,8 +591,12 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                         : "Never contacted"}
                     </td>
                     <td className="px-4 py-4 text-neutral-700">
-                      <div>{formatDate(lead.next_followup_date)}</div>
-                      {isOverdue(lead.next_followup_date) ? (
+                      {isClosedLead(lead) ? (
+                        <StatusBadge label="Closed" tone="slate" />
+                      ) : (
+                        <div>{formatDate(lead.next_followup_date)}</div>
+                      )}
+                      {!isClosedLead(lead) && isOverdue(lead.next_followup_date) ? (
                         <div className="mt-1 text-xs font-semibold text-red-700">
                           Overdue
                         </div>

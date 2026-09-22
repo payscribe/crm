@@ -40,6 +40,13 @@ function isTodayOrPast(value: string | null | undefined) {
   return new Date(value).getTime() <= today.getTime();
 }
 
+function isClosedLead(lead: Lead) {
+  return (
+    ["Closed Won", "Closed Lost"].includes(lead.status) ||
+    ["Converted", "Closed Lost"].includes(lead.stage)
+  );
+}
+
 export default async function HomePage() {
   const { supabase, currentUser, permissions } = await getCurrentUserContext();
 
@@ -130,9 +137,7 @@ export default async function HomePage() {
     (ticket) => isOpenTicket(ticket) && isTodayOrPast(ticket.sla_deadline)
   );
   const leadFollowupsDue = leadRecords.filter(
-    (lead) =>
-      !["Closed Won", "Closed Lost"].includes(lead.status) &&
-      isTodayOrPast(lead.next_followup_date)
+    (lead) => !isClosedLead(lead) && isTodayOrPast(lead.next_followup_date)
   );
   const hotLeadFollowups = leadFollowupsDue.filter(
     (lead) => lead.status === "Hot"

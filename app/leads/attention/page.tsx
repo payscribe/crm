@@ -20,6 +20,13 @@ function hoursSince(value: string) {
   return Math.floor((Date.now() - new Date(value).getTime()) / 3600000);
 }
 
+function isClosedLead(lead: Lead) {
+  return (
+    ["Closed Won", "Closed Lost"].includes(lead.status) ||
+    ["Converted", "Closed Lost"].includes(lead.stage)
+  );
+}
+
 export default async function LeadAttentionPage() {
   const { supabase, currentUser, permissions } = await getCurrentUserContext();
 
@@ -44,12 +51,11 @@ export default async function LeadAttentionPage() {
     ])
   );
   const dueLeads = records.filter(
-    (lead) =>
-      !["Closed Won", "Closed Lost"].includes(lead.status) &&
-      isDueOrOverdue(lead.next_followup_date)
+    (lead) => !isClosedLead(lead) && isDueOrOverdue(lead.next_followup_date)
   );
   const newNoContact48Hours = records.filter(
     (lead) =>
+      !isClosedLead(lead) &&
       lead.stage === "New" &&
       !lead.last_contact_date &&
       hoursSince(lead.created_at) >= 48
