@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDate } from "@/lib/format/date";
 import Image from "next/image";
+import {
+  isOutsideSupportHours,
+  SUPPORT_HOURS_NOTICE
+} from "@/lib/support/hours";
 import type { TicketNote } from "@/lib/types/tickets";
 import type { StaffUser } from "@/lib/types/users";
 import { AddTicketNoteForm } from "./add-ticket-note-form";
@@ -36,6 +40,7 @@ export function TicketConversation({
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [liveState, setLiveState] = useState<"connecting" | "live" | "reconnecting">("connecting");
+  const [outsideHours, setOutsideHours] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const openRef = useRef(false);
   const staffById = useMemo(
@@ -46,6 +51,16 @@ export function TicketConversation({
   useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
+
+  useEffect(() => {
+    function syncHours() {
+      setOutsideHours(isOutsideSupportHours());
+    }
+
+    syncHours();
+    const timer = window.setInterval(syncHours, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     openRef.current = open;
@@ -146,6 +161,15 @@ export function TicketConversation({
                 ×
               </button>
             </div>
+
+            {outsideHours ? (
+              <div
+                role="status"
+                className="border-b border-amber-200 bg-amber-50 px-5 py-2.5 text-xs leading-5 text-amber-900"
+              >
+                {SUPPORT_HOURS_NOTICE}
+              </div>
+            ) : null}
 
             <div className="flex-1 space-y-4 overflow-y-auto bg-neutral-50/70 px-3 py-4 sm:px-6 sm:py-5">
         {messages.length === 0 ? (
