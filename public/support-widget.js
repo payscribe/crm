@@ -171,7 +171,7 @@
 		".ps-support-input,.ps-support-select,.ps-support-textarea{width:100%;box-sizing:border-box;border:1px solid #d4d4d4;border-radius:8px;background:#fff;padding:10px 11px;font:14px system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;outline:none}" +
 		".ps-support-date-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ps-support-report{border:1px solid #eee;border-radius:8px;background:#fafafa;color:#222;margin:12px 0;padding:12px;white-space:pre-wrap;font:13px/1.55 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-height:330px;overflow:auto}" +
 		".ps-support-chat{display:flex;flex:1;min-height:0;width:100%;flex-direction:column;background:#f8fafc}.ps-support-chat-status{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #e5e7eb;background:#fff;padding:11px 16px}.ps-support-chat-status strong{font-size:12px;color:#374151}.ps-support-live{display:inline-flex;align-items:center;gap:5px;color:#15803d;font-size:11px;font-weight:600}.ps-support-live:before{content:'';width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.12)}.ps-support-messages{display:flex;flex:1;min-height:0;flex-direction:column;gap:12px;overflow-y:auto;padding:16px;scroll-behavior:smooth}.ps-support-message{max-width:82%;border-radius:16px;padding:10px 12px;box-shadow:0 1px 2px rgba(15,23,42,.06)}.ps-support-message-agent{align-self:flex-start;border:1px solid #e5e7eb;border-bottom-left-radius:5px;background:#fff;color:#1f2937}.ps-support-message-customer{align-self:flex-end;border-bottom-right-radius:5px;background:#3362b0;color:#fff}.ps-support-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:5px;font-size:10px;opacity:.72}.ps-support-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5}.ps-support-attachment{margin-top:9px;overflow:hidden;border:1px solid rgba(255,255,255,.28);border-radius:11px;color:inherit;font-size:11px}.ps-support-message-agent .ps-support-attachment{border-color:#e5e7eb}.ps-support-attachment-preview{display:block;height:128px;background:#fff;color:#222;text-decoration:none}.ps-support-attachment-preview img,.ps-support-attachment-preview iframe{display:block;width:100%;height:100%;border:0;object-fit:cover}.ps-support-attachment-preview iframe{pointer-events:none}.ps-support-attachment-info{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px}.ps-support-attachment-name{min-width:0;flex:1 1 100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.ps-support-attachment-action{display:inline-flex;border-radius:6px;background:rgba(255,255,255,.14);padding:3px 7px;color:inherit;font-weight:700;text-decoration:none}.ps-support-message-agent .ps-support-attachment-action{background:#eef2ff;color:#315fae}.ps-support-chat-empty{margin:auto;color:#6b7280;text-align:center;font-size:12px}.ps-support-chat-actions{display:flex;flex:0 0 auto;gap:14px;margin:0!important;border-top:1px solid #eef0f3;background:#fff;padding:8px 16px}.ps-support-chat-actions button{flex:0 0 auto!important;min-height:auto!important;padding:5px 0!important;font-size:12px}.ps-support-composer{display:grid;flex:0 0 auto;grid-template-columns:44px minmax(0,1fr) auto;align-items:end;gap:8px;border-top:1px solid #e5e7eb;background:#fff;padding:12px 14px 14px}.ps-support-composer textarea{display:block;height:44px;min-height:44px;max-height:96px;margin:0;resize:none;border-color:#d1d5db;border-radius:11px;padding:11px 12px;line-height:20px}.ps-support-composer textarea:focus{border-color:#3362b0;box-shadow:0 0 0 3px rgba(51,98,176,.12)}.ps-support-composer>.ps-support-primary{height:44px;min-height:44px;border-radius:11px;padding:0 15px}.ps-support-attach{display:grid;box-sizing:border-box;width:44px;height:44px;place-items:center;margin:0;border:1px solid #d1d5db;border-radius:11px;background:#fff;color:#3362b0;cursor:pointer;transition:.2s}.ps-support-attach:hover{border-color:#3362b0;background:#f5f8ff}.ps-support-attach svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.ps-support-attach input{display:none}.ps-support-file-name{grid-column:1/-1;overflow:hidden;border-radius:7px;background:#eef2ff;padding:6px 8px;text-overflow:ellipsis;white-space:nowrap;color:#315fae;font-size:11px}" +
-		".ps-support-chat>.ps-support-error{flex:0 0 auto;margin:10px 14px 0;padding:9px 11px}.ps-support-message-customer{border:1px solid #c9daf8;background:#e7effc;color:#173b70}.ps-support-message-customer .ps-support-attachment{border-color:#bfd1ef;background:rgba(255,255,255,.42)}.ps-support-message-customer .ps-support-attachment-action{background:#d4e2f8;color:#244f91}.ps-support-composer[hidden]{display:none!important}.ps-support-textarea{min-height:110px;resize:vertical}.ps-support-primary,.ps-support-secondary{border:0;border-radius:8px;padding:10px 12px;font-weight:700;cursor:pointer}.ps-support-link{border:0;background:transparent;color:#3362b0;padding:8px 0;font-weight:700;cursor:pointer}" +
+		".ps-support-hours-banner{flex:0 0 auto;border-bottom:1px solid #fde68a;background:#fffbeb;color:#92400e;padding:10px 16px;font-size:12px;line-height:1.45}.ps-support-hours-banner[hidden]{display:none!important}.ps-support-chat>.ps-support-error{flex:0 0 auto;margin:10px 14px 0;padding:9px 11px}.ps-support-message-customer{border:1px solid #c9daf8;background:#e7effc;color:#173b70}.ps-support-message-customer .ps-support-attachment{border-color:#bfd1ef;background:rgba(255,255,255,.42)}.ps-support-message-customer .ps-support-attachment-action{background:#d4e2f8;color:#244f91}.ps-support-composer[hidden]{display:none!important}.ps-support-textarea{min-height:110px;resize:vertical}.ps-support-primary,.ps-support-secondary{border:0;border-radius:8px;padding:10px 12px;font-weight:700;cursor:pointer}.ps-support-link{border:0;background:transparent;color:#3362b0;padding:8px 0;font-weight:700;cursor:pointer}" +
 		".ps-support-primary{background:#3362b0;color:#fff}.ps-support-secondary{background:#f5f5f5;color:#222}.ps-support-error{border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;padding:10px;margin-bottom:12px}" +
 		".ps-support-success{border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:8px;padding:10px;margin-bottom:12px}.ps-support-review{border:1px solid #eee;border-radius:8px;background:#fafafa;padding:10px;margin:12px 0}.ps-support-review div{margin:5px 0}@media(max-width:520px){.ps-support-panel{right:8px;bottom:76px;width:calc(100vw - 16px);max-height:calc(100dvh - 92px);border-radius:16px}.ps-support-panel.ps-support-panel-chat{height:min(680px,calc(100dvh - 92px))}.ps-support-messages{padding:14px 12px}.ps-support-message{max-width:88%}.ps-support-composer{grid-template-columns:42px minmax(0,1fr) auto;padding:10px 11px 12px}.ps-support-attach,.ps-support-composer textarea,.ps-support-composer>.ps-support-primary{height:42px;min-height:42px}.ps-support-composer>.ps-support-primary{padding:0 13px}}";
 	document.head.appendChild(style);
@@ -215,12 +215,37 @@
 		report_text: "",
 		report_meta: null,
 		conversation_stream: null,
+		hours_timer: null,
 	};
+
+	function isOutsideSupportHours(now) {
+		var parts = {};
+		new Intl.DateTimeFormat("en-US", {
+			timeZone: "Africa/Lagos",
+			weekday: "short",
+			hour: "numeric",
+			hourCycle: "h23"
+		}).formatToParts(now || new Date()).forEach(function (part) {
+			if (part.type !== "literal") parts[part.type] = part.value;
+		});
+		var hour = Number(parts.hour);
+		return parts.weekday === "Sat" || parts.weekday === "Sun" || hour < 9 || hour >= 17;
+	}
+
+	function syncHoursBanner(banner) {
+		var outsideHours = isOutsideSupportHours();
+		banner.hidden = !outsideHours;
+		banner.setAttribute("data-outside-hours", outsideHours ? "true" : "false");
+	}
 
 	function clearBody() {
 		if (state.conversation_stream) {
 			state.conversation_stream.close();
 			state.conversation_stream = null;
+		}
+		if (state.hours_timer) {
+			clearInterval(state.hours_timer);
+			state.hours_timer = null;
 		}
 		while (body.firstChild) {
 			body.removeChild(body.firstChild);
@@ -556,6 +581,17 @@
 		statusRow.appendChild(statusText);
 		statusRow.appendChild(live);
 		chat.appendChild(statusRow);
+		var hoursBanner = createElement(
+			"div",
+			"ps-support-hours-banner",
+			"Messages sent now may get a delayed response. Support typically replies 9am–5pm, Monday to Friday."
+		);
+		hoursBanner.setAttribute("role", "status");
+		syncHoursBanner(hoursBanner);
+		state.hours_timer = setInterval(function () {
+			syncHoursBanner(hoursBanner);
+		}, 60000);
+		chat.appendChild(hoursBanner);
 
 		var messages = createElement("div", "ps-support-messages");
 		chat.appendChild(messages);
