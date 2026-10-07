@@ -13,6 +13,18 @@ export type LeadSource =
 
 export type LeadProductInterest = string;
 
+export type LeadBusinessType =
+  | "Fintech"
+  | "SaaS / Software"
+  | "E-commerce / Marketplace"
+  | "Lending / Credit"
+  | "Investment / Wealthtech"
+  | "Healthtech"
+  | "Edtech"
+  | "Logistics / Mobility"
+  | "Retail / Consumer"
+  | "Others";
+
 export type LeadStage =
   | "New"
   | "Contacted"
@@ -37,6 +49,7 @@ export type Lead = {
   lead_id: string;
   full_name: string;
   business_name: string | null;
+  business_type: LeadBusinessType | null;
   phone: string;
   email: string | null;
   source: LeadSource;
@@ -82,3 +95,4 @@ export type LeadCommunicationLog = {
   logged_by: string;
   created_at: string;
 };
+

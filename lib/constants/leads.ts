@@ -3,6 +3,7 @@ import type {
   LeadCommunicationDirection,
   LeadPriority,
   LeadProductInterest,
+  LeadBusinessType,
   LeadSource,
   LeadStage,
   LeadStatus
@@ -20,6 +21,19 @@ export const leadSources: LeadSource[] = [
   "TechPoint Article",
   "Email Campaign",
   "Other"
+];
+
+export const leadBusinessTypes: LeadBusinessType[] = [
+  "Fintech",
+  "SaaS / Software",
+  "E-commerce / Marketplace",
+  "Lending / Credit",
+  "Investment / Wealthtech",
+  "Healthtech",
+  "Edtech",
+  "Logistics / Mobility",
+  "Retail / Consumer",
+  "Others"
 ];
 
 export const leadProductInterests: LeadProductInterest[] = [
@@ -82,3 +96,4 @@ export const leadCommunicationDirections: LeadCommunicationDirection[] = [
   "Inbound",
   "Outbound"
 ];
+

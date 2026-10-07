@@ -13,6 +13,7 @@ import {
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import {
+  leadBusinessTypes,
   leadPriorities,
   leadSources,
   leadStages,
@@ -21,7 +22,13 @@ import {
 import { formatDate } from "@/lib/format/date";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getLeadProductInterestOptions } from "@/lib/settings/managed-options";
-import type { Lead, LeadPriority, LeadStage, LeadStatus } from "@/lib/types/leads";
+import type {
+  Lead,
+  LeadBusinessType,
+  LeadPriority,
+  LeadStage,
+  LeadStatus
+} from "@/lib/types/leads";
 import type { StaffUser } from "@/lib/types/users";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -34,6 +41,7 @@ type LeadsPageProps = {
     stage?: string;
     status?: string;
     source?: string;
+    business_type?: string;
     priority?: string;
     error?: string;
     success?: string;
@@ -71,6 +79,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const stage = searchParams?.stage ?? "";
   const status = searchParams?.status ?? "";
   const source = searchParams?.source ?? "";
+  const businessType = searchParams?.business_type ?? "";
   const priority = searchParams?.priority ?? "";
 
   let leadsQuery = supabase.from("leads").select("*");
@@ -91,6 +100,10 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
 
   if (leadSources.includes(source as never)) {
     leadsQuery = leadsQuery.eq("source", source);
+  }
+
+  if (leadBusinessTypes.includes(businessType as LeadBusinessType)) {
+    leadsQuery = leadsQuery.eq("business_type", businessType);
   }
 
   if (leadPriorities.includes(priority as LeadPriority)) {
@@ -214,7 +227,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 </div>
                 <div className="rounded border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-600 leading-5">
                   <strong className="text-neutral-800">Required columns:</strong> <code>full_name</code>, <code>phone</code><br />
-                  <strong className="text-neutral-800">Optional columns:</strong> <code>business_name</code>, <code>email</code>, <code>source</code>, <code>referral_source_name</code>, <code>product_interest</code>, <code>stage</code>, <code>status</code>, <code>priority</code>, <code>assigned_to_email</code>, <code>next_followup_date</code>, <code>last_message_summary</code>, <code>notes</code>
+                  <strong className="text-neutral-800">Optional columns:</strong> <code>business_name</code>, <code>business_type</code>, <code>email</code>, <code>source</code>, <code>referral_source_name</code>, <code>product_interest</code>, <code>stage</code>, <code>status</code>, <code>priority</code>, <code>assigned_to_email</code>, <code>next_followup_date</code>, <code>last_message_summary</code>, <code>notes</code>
                 </div>
                 <div className="flex items-center justify-between">
                   <DownloadTemplateButton />
@@ -251,6 +264,23 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                   name="business_name"
                   className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
                 />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-neutral-800">
+                  Business type
+                </span>
+                <select
+                  name="business_type"
+                  className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                >
+                  <option value="">Select business type</option>
+                  {leadBusinessTypes.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="block">
@@ -455,7 +485,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         ) : null}
 
         <div className="mt-6 rounded border border-neutral-200 bg-white p-4">
-          <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_190px_190px_190px_190px_auto]">
+          <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_170px_170px_170px_190px_170px_auto]">
             <input
               name="q"
               defaultValue={query}
@@ -499,6 +529,18 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
               ))}
             </select>
             <select
+              name="business_type"
+              defaultValue={businessType}
+              className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+            >
+              <option value="">All business types</option>
+              {leadBusinessTypes.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+            <select
               name="priority"
               defaultValue={priority}
               className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
@@ -528,6 +570,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Priority</th>
                   <th className="px-4 py-3">Source</th>
+                  <th className="px-4 py-3">Business Type</th>
                   <th className="px-4 py-3">Assigned</th>
                   <th className="px-4 py-3 text-center">Follow-ups Done</th>
                   <th className="px-4 py-3">Last Contact</th>
@@ -572,6 +615,9 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                       {lead.source}
                     </td>
                     <td className="px-4 py-4 text-neutral-700">
+                      {lead.business_type ?? "Not set"}
+                    </td>
+                    <td className="px-4 py-4 text-neutral-700">
                       {staffById.get(lead.assigned_to) ?? "Unknown"}
                     </td>
                     <td className="px-4 py-4 text-center text-neutral-700">
@@ -606,7 +652,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 ))}
 
                 {records.length === 0 ? (
-                  <EmptyTableRow colSpan={9} message="No leads found." />
+                  <EmptyTableRow colSpan={10} message="No leads found." />
                 ) : null}
               </tbody>
             </table>

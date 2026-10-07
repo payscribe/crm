@@ -10,12 +10,13 @@ import {
 import {
   leadCommunicationChannels,
   leadCommunicationDirections,
+  leadBusinessTypes,
   leadPriorities,
   leadSources,
   leadStages,
   leadStatuses
 } from "@/lib/constants/leads";
-import type { LeadStage, LeadStatus } from "@/lib/types/leads";
+import type { LeadBusinessType, LeadStage, LeadStatus } from "@/lib/types/leads";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getLeadProductInterestOptions } from "@/lib/settings/managed-options";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -281,6 +282,7 @@ export async function createLead(formData: FormData) {
 
   const fullName = requiredText(formData, "full_name");
   const phone = requiredText(formData, "phone");
+  const businessType = optionalText(formData.get("business_type"));
   const source = requiredText(formData, "source");
   const stage = requiredText(formData, "stage") ?? "New";
   const status = requiredText(formData, "status") ?? "Warm";
@@ -300,6 +302,10 @@ export async function createLead(formData: FormData) {
 
   if (!leadSources.includes(source as never)) {
     redirect("/leads?error=Invalid%20lead%20source");
+  }
+
+  if (businessType && !leadBusinessTypes.includes(businessType as LeadBusinessType)) {
+    redirect("/leads?error=Invalid%20business%20type");
   }
 
   if (source === "Referral" && !referralSourceName) {
@@ -343,6 +349,7 @@ export async function createLead(formData: FormData) {
     .insert({
       full_name: fullName,
       business_name: optionalText(formData.get("business_name")),
+      business_type: businessType,
       phone,
       email: optionalText(formData.get("email")),
       source,
@@ -417,6 +424,7 @@ async function validateLeadForm(
 ) {
   const fullName = requiredText(formData, "full_name");
   const phone = requiredText(formData, "phone");
+  const businessType = optionalText(formData.get("business_type"));
   const source = requiredText(formData, "source");
   const stage = requiredText(formData, "stage") ?? "New";
   const status = requiredText(formData, "status") ?? "Warm";
@@ -436,6 +444,10 @@ async function validateLeadForm(
 
   if (!leadSources.includes(source as never)) {
     redirect(`${redirectPath}?error=Invalid%20lead%20source`);
+  }
+
+  if (businessType && !leadBusinessTypes.includes(businessType as LeadBusinessType)) {
+    redirect(`${redirectPath}?error=Invalid%20business%20type`);
   }
 
   if (source === "Referral" && !referralSourceName) {
@@ -481,6 +493,7 @@ async function validateLeadForm(
   return {
     fullName,
     phone,
+    businessType,
     source,
     stage,
     status,
@@ -532,6 +545,7 @@ export async function updateLead(formData: FormData) {
     .update({
       full_name: values.fullName,
       business_name: optionalText(formData.get("business_name")),
+      business_type: values.businessType,
       phone: values.phone,
       email: optionalText(formData.get("email")),
       source: values.source,
@@ -980,6 +994,9 @@ export async function bulkUploadLeads(formData: FormData) {
     const priority = leadPriorities.includes(get("priority") as never)
       ? get("priority")
       : "Medium";
+    const businessType = leadBusinessTypes.includes(get("business_type") as LeadBusinessType)
+      ? (get("business_type") as LeadBusinessType)
+      : null;
     const source = leadSources.includes(get("source") as typeof leadSources[number])
       ? (get("source") as typeof leadSources[number])
       : null;
@@ -1018,6 +1035,7 @@ export async function bulkUploadLeads(formData: FormData) {
     records.push({
       full_name: fullName,
       business_name: get("business_name"),
+      business_type: businessType,
       phone,
       email: get("email")?.toLowerCase() ?? null,
       source,
