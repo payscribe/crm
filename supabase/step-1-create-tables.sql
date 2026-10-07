@@ -476,6 +476,21 @@ create table if not exists public.leads (
   lead_id text primary key default public.format_record_id('PS', 'public.leads_seq'),
   full_name text not null check (length(trim(full_name)) > 0),
   business_name text,
+  business_type text check (
+    business_type is null
+    or business_type in (
+      'Fintech',
+      'SaaS / Software',
+      'E-commerce / Marketplace',
+      'Lending / Credit',
+      'Investment / Wealthtech',
+      'Healthtech',
+      'Edtech',
+      'Logistics / Mobility',
+      'Retail / Consumer',
+      'Others'
+    )
+  ),
   phone text not null check (length(trim(phone)) > 0),
   email text check (email is null or position('@' in email) > 1),
   source public.lead_source not null,
@@ -880,6 +895,7 @@ create index if not exists idx_leads_assigned_to on public.leads (assigned_to);
 create index if not exists idx_leads_stage on public.leads (stage);
 create index if not exists idx_leads_status on public.leads (status);
 create index if not exists idx_leads_source on public.leads (source);
+create index if not exists idx_leads_business_type on public.leads (business_type) where business_type is not null;
 create index if not exists idx_leads_next_followup_date on public.leads (next_followup_date);
 create index if not exists idx_leads_created_at on public.leads (created_at);
 create index if not exists idx_lead_communication_log_lead_id on public.lead_communication_log (lead_id);

@@ -14,6 +14,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { fetchActivityFeed } from "@/lib/activity/feed";
 import {
+  leadBusinessTypes,
   leadCommunicationChannels,
   leadCommunicationDirections,
   leadPriorities,
@@ -203,6 +204,14 @@ export default async function LeadDetailPage({
           </div>
           <div className="rounded border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">
+              Business type
+            </p>
+            <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
+              {lead.business_type ?? "Not set"}
+            </p>
+          </div>
+          <div className="rounded border border-neutral-200 bg-white p-5">
+            <p className="text-sm font-medium text-neutral-500">
               Last contact
             </p>
             <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
@@ -308,6 +317,25 @@ export default async function LeadDetailPage({
                 defaultValue={lead.business_name ?? ""}
                 className={inputClass}
               />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-neutral-800">
+                Business type
+              </span>
+              <select
+                disabled={disabled}
+                name="business_type"
+                defaultValue={lead.business_type ?? ""}
+                className={selectClass}
+              >
+                <option value="">Select business type</option>
+                {leadBusinessTypes.map((businessType) => (
+                  <option key={businessType} value={businessType}>
+                    {businessType}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="block">
