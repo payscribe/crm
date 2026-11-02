@@ -16,6 +16,8 @@ export type ActivityEntry = {
   channel: string | null;
   direction: "Inbound" | "Outbound" | null;
   actorId: string | null;
+  // Shown instead of a staff name for entries no person logged.
+  actorLabel?: string;
   summary: string;
 };
 

@@ -92,7 +92,15 @@ export type LeadCommunicationLog = {
   action_taken: string | null;
   next_step: string | null;
   follow_up_date: string | null;
-  logged_by: string;
+  // Null for emails imported from the shared sales mailbox.
+  logged_by: string | null;
+  source: "Manual" | "Gmail";
+  email_message_id: string | null;
+  gmail_message_id: string | null;
+  gmail_thread_id: string | null;
+  email_subject: string | null;
+  email_from: string | null;
+  email_to: string | null;
   created_at: string;
 };
 

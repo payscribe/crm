@@ -127,12 +127,16 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const { data: commLogs } = leadIds.length > 0
     ? await supabase
         .from("lead_communication_log")
-        .select("lead_id")
+        .select("lead_id, source, direction")
         .in("lead_id", leadIds)
     : { data: null };
 
   const followUpCountsByLeadId = new Map<string, number>();
   for (const log of commLogs ?? []) {
+    // Emails the lead sent are synced from Gmail but are not team follow-ups.
+    if (log.source === "Gmail" && log.direction === "Inbound") {
+      continue;
+    }
     followUpCountsByLeadId.set(
       log.lead_id,
       (followUpCountsByLeadId.get(log.lead_id) ?? 0) + 1

@@ -59,7 +59,9 @@ export function ActivityTimeline({
           <div key={`${entry.source}:${entry.id}`} className="p-4">
             <div className="flex flex-col gap-1 text-xs text-neutral-500 md:flex-row md:items-center md:justify-between">
               <span className="font-semibold text-neutral-700">
-                {actorNames.get(entry.actorId ?? "") ?? "Team member"}
+                {entry.actorLabel ??
+                  actorNames.get(entry.actorId ?? "") ??
+                  "Team member"}
                 {entry.channel ? ` · ${entry.channel}` : ""}
                 {entry.direction ? ` · ${entry.direction}` : ""}
               </span>

@@ -32,6 +32,7 @@ function fromLeadLog(row: LeadCommunicationLog): ActivityEntry {
     channel: row.channel,
     direction: row.direction,
     actorId: row.logged_by,
+    actorLabel: row.source === "Gmail" ? "Sales mailbox" : undefined,
     summary: row.summary
   };
 }
