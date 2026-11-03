@@ -4,13 +4,18 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/format/date";
+import { isClosedLead } from "@/lib/leads/status";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import type { Lead } from "@/lib/types/leads";
 import type { StaffUser } from "@/lib/types/users";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-function isDueOrOverdue(date: string) {
+function isDueOrOverdue(date: string | null) {
+  if (!date) {
+    return false;
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return new Date(date).getTime() <= today.getTime();
@@ -18,13 +23,6 @@ function isDueOrOverdue(date: string) {
 
 function hoursSince(value: string) {
   return Math.floor((Date.now() - new Date(value).getTime()) / 3600000);
-}
-
-function isClosedLead(lead: Lead) {
-  return (
-    ["Closed Won", "Closed Lost"].includes(lead.status) ||
-    ["Converted", "Closed Lost"].includes(lead.stage)
-  );
 }
 
 export default async function LeadAttentionPage() {

@@ -23,6 +23,7 @@ import {
   leadStatuses
 } from "@/lib/constants/leads";
 import { formatDate } from "@/lib/format/date";
+import { isClosedLead } from "@/lib/leads/status";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getHistoricalAwareLeadProductOptions } from "@/lib/settings/managed-options";
 import type { Business } from "@/lib/types/businesses";
@@ -41,13 +42,6 @@ type LeadDetailPageProps = {
     success?: string;
   };
 };
-
-function isClosedLead(lead: Lead) {
-  return (
-    ["Closed Won", "Closed Lost"].includes(lead.status) ||
-    ["Converted", "Closed Lost"].includes(lead.stage)
-  );
-}
 
 export default async function LeadDetailPage({
   params,
@@ -225,7 +219,11 @@ export default async function LeadDetailPage({
               Next follow-up
             </p>
             <p className="mt-2 break-words text-lg font-semibold text-neutral-950 md:text-xl">
-              {closedLead ? "Closed" : formatDate(lead.next_followup_date)}
+              {closedLead
+                ? "Closed"
+                : lead.next_followup_date
+                  ? formatDate(lead.next_followup_date)
+                  : "Not set"}
             </p>
           </div>
           {lead.status === "Closed Lost" ? (
@@ -468,21 +466,23 @@ export default async function LeadDetailPage({
               </select>
             </label>
 
-            <label className="block">
-              <span className="text-sm font-medium text-neutral-800">
-                Next follow-up date
-              </span>
-              <input
-                disabled={disabled}
-                name="next_followup_date"
-                type="date"
-                defaultValue={lead.next_followup_date}
-                className={inputClass}
-              />
-              <span className="mt-1 block text-xs text-neutral-500">
-                Required unless the lead is Closed Won or Closed Lost.
-              </span>
-            </label>
+            {closedLead ? null : (
+              <label className="block">
+                <span className="text-sm font-medium text-neutral-800">
+                  Next follow-up date
+                </span>
+                <input
+                  disabled={disabled}
+                  name="next_followup_date"
+                  type="date"
+                  defaultValue={lead.next_followup_date ?? ""}
+                  className={inputClass}
+                />
+                <span className="mt-1 block text-xs text-neutral-500">
+                  Optional. Leave blank if no follow-up is planned.
+                </span>
+              </label>
+            )}
 
             <label className="block xl:col-span-2">
               <span className="text-sm font-medium text-neutral-800">
@@ -577,7 +577,9 @@ export default async function LeadDetailPage({
                 Log Communication
               </h3>
               <p className="mt-1 text-sm text-neutral-600">
-                Adding a log updates last contact date and follow-up date.
+                {closedLead
+                  ? "Adding a log updates the last contact date."
+                  : "Adding a log updates last contact date and follow-up date."}
               </p>
             </div>
 
@@ -628,16 +630,18 @@ export default async function LeadDetailPage({
                 </select>
               </label>
 
-              <label className="block">
-                <span className="text-sm font-medium text-neutral-800">
-                  Follow-up date
-                </span>
-                <input
-                  name="follow_up_date"
-                  type="date"
-                  className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
-                />
-              </label>
+              {closedLead ? null : (
+                <label className="block">
+                  <span className="text-sm font-medium text-neutral-800">
+                    Follow-up date
+                  </span>
+                  <input
+                    name="follow_up_date"
+                    type="date"
+                    className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
+                  />
+                </label>
+              )}
             </div>
 
             <label className="mt-5 block">

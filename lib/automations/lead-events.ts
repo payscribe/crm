@@ -1,4 +1,5 @@
 import type { NewAutomationEvent } from "@/lib/types/automation-events";
+import { isClosedLead } from "@/lib/leads/status";
 import type { Lead } from "@/lib/types/leads";
 import type { StaffUser } from "@/lib/types/users";
 import {
@@ -59,7 +60,7 @@ function eventForLead({
 }
 
 function isFollowUpDue(lead: Lead) {
-  if (lead.status === "Closed Won" || lead.status === "Closed Lost") {
+  if (isClosedLead(lead) || !lead.next_followup_date) {
     return false;
   }
 

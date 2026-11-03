@@ -1,15 +1,21 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
+// Settings are passed as [name, value] so a misconfigured deployment reports
+// which variable names are missing, never their values.
 function verifyScriptCredentials(
   request: Request,
-  secret: string | undefined,
-  mailbox: string | undefined
+  [secretName, secret]: [string, string | undefined],
+  [mailboxName, mailbox]: [string, string | undefined]
 ) {
   const expectedSecret = secret?.trim();
   const expectedMailbox = mailbox?.trim().toLowerCase();
   if (!expectedSecret || !expectedMailbox) {
-    return NextResponse.json({ error: "Google email integration is not configured" }, { status: 503 });
+    const missing = [!expectedSecret && secretName, !expectedMailbox && mailboxName].filter(Boolean);
+    return NextResponse.json(
+      { error: `Google email integration is not configured: ${missing.join(", ")} not set` },
+      { status: 503 }
+    );
   }
   const providedMailbox = request.headers.get("x-crm-mailbox")?.trim().toLowerCase();
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ?? "";
@@ -30,8 +36,8 @@ export function verifyGoogleScriptRequest(request: Request) {
   }
   return verifyScriptCredentials(
     request,
-    process.env.INBOUND_EMAIL_WEBHOOK_SECRET,
-    process.env.GOOGLE_EMAIL_MAILBOX
+    ["INBOUND_EMAIL_WEBHOOK_SECRET", process.env.INBOUND_EMAIL_WEBHOOK_SECRET],
+    ["GOOGLE_EMAIL_MAILBOX", process.env.GOOGLE_EMAIL_MAILBOX]
   );
 }
 
@@ -40,7 +46,7 @@ export function verifyGoogleScriptRequest(request: Request) {
 export function verifyLeadEmailSyncRequest(request: Request) {
   return verifyScriptCredentials(
     request,
-    process.env.LEAD_EMAIL_SYNC_SECRET,
-    process.env.LEAD_EMAIL_MAILBOX
+    ["LEAD_EMAIL_SYNC_SECRET", process.env.LEAD_EMAIL_SYNC_SECRET],
+    ["LEAD_EMAIL_MAILBOX", process.env.LEAD_EMAIL_MAILBOX]
   );
 }

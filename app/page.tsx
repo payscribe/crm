@@ -8,6 +8,7 @@ import { defaultAutomationSettings } from "@/lib/constants/automation-settings";
 import { businessLifecycleStages } from "@/lib/constants/businesses";
 import { leadStages } from "@/lib/constants/leads";
 import { formatDate } from "@/lib/format/date";
+import { isClosedLead } from "@/lib/leads/status";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import type { AutomationSettings } from "@/lib/types/automation-settings";
 import type { Business } from "@/lib/types/businesses";
@@ -38,13 +39,6 @@ function isTodayOrPast(value: string | null | undefined) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return new Date(value).getTime() <= today.getTime();
-}
-
-function isClosedLead(lead: Lead) {
-  return (
-    ["Closed Won", "Closed Lost"].includes(lead.status) ||
-    ["Converted", "Closed Lost"].includes(lead.stage)
-  );
 }
 
 export default async function HomePage() {

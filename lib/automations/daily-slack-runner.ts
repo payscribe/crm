@@ -37,7 +37,7 @@ type LeadThreadRecord = {
   stage: string;
   status: string;
   assigned_to: string;
-  next_followup_date: string;
+  next_followup_date: string | null;
   slack_channel_id: string | null;
   slack_thread_ts: string | null;
 };

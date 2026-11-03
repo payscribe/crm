@@ -20,6 +20,7 @@ import {
   leadStatuses
 } from "@/lib/constants/leads";
 import { formatDate } from "@/lib/format/date";
+import { isClosedLead } from "@/lib/leads/status";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import { getLeadProductInterestOptions } from "@/lib/settings/managed-options";
 import type {
@@ -48,17 +49,14 @@ type LeadsPageProps = {
   };
 };
 
-function isOverdue(date: string) {
+function isOverdue(date: string | null) {
+  if (!date) {
+    return false;
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return new Date(date).getTime() < today.getTime();
-}
-
-function isClosedLead(lead: Lead) {
-  return (
-    ["Closed Won", "Closed Lost"].includes(lead.status) ||
-    ["Converted", "Closed Lost"].includes(lead.stage)
-  );
 }
 
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
@@ -419,7 +417,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                   className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-payscribe-blue focus:ring-2 focus:ring-payscribe-blue/20"
                 />
                 <span className="mt-1 block text-xs text-neutral-500">
-                  Required unless the lead is Closed Won or Closed Lost.
+                  Optional. Ignored for closed or converted leads.
                 </span>
               </label>
 
@@ -644,7 +642,11 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                       {isClosedLead(lead) ? (
                         <StatusBadge label="Closed" tone="slate" />
                       ) : (
-                        <div>{formatDate(lead.next_followup_date)}</div>
+                        <div>
+                          {lead.next_followup_date
+                            ? formatDate(lead.next_followup_date)
+                            : "Not set"}
+                        </div>
                       )}
                       {!isClosedLead(lead) && isOverdue(lead.next_followup_date) ? (
                         <div className="mt-1 text-xs font-semibold text-red-700">

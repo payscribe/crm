@@ -25,6 +25,7 @@ import {
 } from "@/lib/constants/leads";
 import type { LeadBusinessType, LeadStage, LeadStatus } from "@/lib/types/leads";
 import { hasModulePermission } from "@/lib/permissions/checks";
+import { isClosedLeadState } from "@/lib/leads/status";
 import { getLeadProductInterestOptions } from "@/lib/settings/managed-options";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { NewAutomationEvent } from "@/lib/types/automation-events";
@@ -39,14 +40,6 @@ function optionalText(value: FormDataEntryValue | null) {
 
 function requiredText(formData: FormData, key: string) {
   return optionalText(formData.get(key));
-}
-
-function isClosedLeadStatus(status: string) {
-  return status === "Closed Won" || status === "Closed Lost";
-}
-
-function fallbackTodayDate() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 async function notifyLeadAssignee({
@@ -113,10 +106,6 @@ export async function createLead(formData: FormData) {
     redirect("/leads?error=Name,%20phone,%20source,%20and%20assignee%20are%20required");
   }
 
-  if (!isClosedLeadStatus(status) && !nextFollowupDate) {
-    redirect("/leads?error=Follow-up%20date%20is%20required%20for%20active%20leads");
-  }
-
   if (!leadSources.includes(source as never)) {
     redirect("/leads?error=Invalid%20lead%20source");
   }
@@ -176,7 +165,7 @@ export async function createLead(formData: FormData) {
       status,
       priority,
       assigned_to: assignedTo,
-      next_followup_date: nextFollowupDate ?? fallbackTodayDate(),
+      next_followup_date: isClosedLeadState(stage, status) ? null : nextFollowupDate,
       last_message_summary: lastMessageSummary,
       notes: optionalText(formData.get("notes")),
       lost_reason: status === "Closed Lost" ? lostReason : null
@@ -236,8 +225,7 @@ async function validateLeadForm(
   supabase: Awaited<ReturnType<typeof getCurrentUserContext>>["supabase"],
   formData: FormData,
   redirectPath: string,
-  existingProductInterest: string[] = [],
-  existingNextFollowupDate?: string
+  existingProductInterest: string[] = []
 ) {
   const fullName = requiredText(formData, "full_name");
   const phone = requiredText(formData, "phone");
@@ -253,10 +241,6 @@ async function validateLeadForm(
 
   if (!fullName || !phone || !source || !assignedTo) {
     redirect(`${redirectPath}?error=Name,%20phone,%20source,%20and%20assignee%20are%20required`);
-  }
-
-  if (!isClosedLeadStatus(status) && !nextFollowupDate) {
-    redirect(`${redirectPath}?error=Follow-up%20date%20is%20required%20for%20active%20leads`);
   }
 
   if (!leadSources.includes(source as never)) {
@@ -316,7 +300,7 @@ async function validateLeadForm(
     status,
     priority,
     assignedTo,
-    nextFollowupDate: nextFollowupDate ?? existingNextFollowupDate ?? fallbackTodayDate(),
+    nextFollowupDate: isClosedLeadState(stage, status) ? null : nextFollowupDate,
     referralSourceName,
     productInterest,
     lastMessageSummary,
@@ -338,7 +322,7 @@ export async function updateLead(formData: FormData) {
 
   const { data: previousLead } = await supabase
     .from("leads")
-    .select("notes, assigned_to, stage, status, product_interest, next_followup_date")
+    .select("notes, assigned_to, stage, status, product_interest")
     .eq("lead_id", leadId)
     .maybeSingle<{
       notes: string | null;
@@ -346,14 +330,12 @@ export async function updateLead(formData: FormData) {
       stage: string;
       status: string;
       product_interest: string[];
-      next_followup_date: string;
     }>();
   const values = await validateLeadForm(
     supabase,
     formData,
     `/leads/${leadId}`,
-    previousLead?.product_interest ?? [],
-    previousLead?.next_followup_date
+    previousLead?.product_interest ?? []
   );
   const nextNotes = optionalText(formData.get("notes"));
 
@@ -823,8 +805,8 @@ export async function bulkUploadLeads(formData: FormData) {
     }
 
     const nextFollowupDate = get("next_followup_date") ?? null;
-    if (!isValidDateInput(nextFollowupDate)) {
-      skipRow("missing or invalid next_followup_date");
+    if (nextFollowupDate && !isValidDateInput(nextFollowupDate)) {
+      skipRow("invalid next_followup_date");
       continue;
     }
 
@@ -862,7 +844,7 @@ export async function bulkUploadLeads(formData: FormData) {
       status,
       priority,
       assigned_to: assignedTo,
-      next_followup_date: nextFollowupDate,
+      next_followup_date: isClosedLeadState(stage, status) ? null : nextFollowupDate,
       last_message_summary: lastMessageSummary,
       notes: get("notes")
     });

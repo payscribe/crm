@@ -5,6 +5,7 @@ import { StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { leadStages } from "@/lib/constants/leads";
 import { formatDate } from "@/lib/format/date";
+import { isClosedLead } from "@/lib/leads/status";
 import { hasModulePermission } from "@/lib/permissions/checks";
 import type { Lead } from "@/lib/types/leads";
 import type { StaffUser } from "@/lib/types/users";
@@ -17,13 +18,6 @@ type LeadPipelinePageProps = {
     success?: string;
   };
 };
-
-function isClosedLead(lead: Lead) {
-  return (
-    ["Closed Won", "Closed Lost"].includes(lead.status) ||
-    ["Converted", "Closed Lost"].includes(lead.stage)
-  );
-}
 
 export default async function LeadPipelinePage({
   searchParams
@@ -131,7 +125,9 @@ export default async function LeadPipelinePage({
                           <dd className="font-medium text-neutral-800">
                             {isClosedLead(lead)
                               ? "Closed"
-                              : formatDate(lead.next_followup_date)}
+                              : lead.next_followup_date
+                                ? formatDate(lead.next_followup_date)
+                                : "Not set"}
                           </dd>
                         </div>
                       </dl>

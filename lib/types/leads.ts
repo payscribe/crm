@@ -60,7 +60,7 @@ export type Lead = {
   priority: LeadPriority;
   assigned_to: string;
   last_contact_date: string | null;
-  next_followup_date: string;
+  next_followup_date: string | null;
   last_message_summary: string | null;
   notes: string | null;
   lost_reason: string | null;
